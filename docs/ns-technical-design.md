@@ -1,7 +1,7 @@
 # NS 技术架构设计文档（ns-technical-design.md）
 
 **文档ID**：ns-technical-design
-**最后更新时间**：2025-09-04
+**最后更新时间**：2025-09-09
 **维护者**：T o（总架构师） + AI 协同支持
 
 ---
@@ -22,106 +22,98 @@
 
 ---
 
-## 1️⃣ 事件驱动机制设计
+## 1️⃣ 事件驱动机制设计 (最终版)
 
-* **核心驱动通道**：所有异步任务由 `ns-topic-job` Pub/Sub 主题触发
-* **消息格式**（标准化 JSON Schema）：
+系统采用**两层 Pub/Sub 主题**的事件驱动模型，以实现调度与执行的完全解耦和高可靠性。
 
-```json
-{
-  "job_id": "apod-20250904",
-  "trigger": "scheduler" | "manual",
-  "trace_id": "ns-20250904-001",
-  "timestamp": "2025-09-04T16:00:00Z"
-}
-```
+### 第一层：调度层事件
+* **核心驱动通道**：`ns-topic-scheduler-triggers`
+* **发布者 (Publisher)**: 3个 Cloud Scheduler (每日/每小时/每周)。
+* **订阅者 (Subscriber)**: 唯一的 `ns-func-dispatcher` (总调度函数)。
+* **消息格式 (标准化JSON)**:
+    ```json
+    {
+      "schedule_type": "daily"
+    }
+    ```
+* **目的**: 将“按时触发”的逻辑与“任务分发”的逻辑彻底分离。调度器只负责“报时”，不关心具体工作内容。
 
-* **发布者**：
+### 第二层：任务层事件
+* **核心驱动通道**: 13个 `ns-topic-[job_id]` 专属主题 (例如 `ns-topic-apod`)。
+* **发布者 (Publisher)**: `ns-func-dispatcher` (总调度函数)。
+* **订阅者 (Subscriber)**: 13个 `ns-func-[job_id]` 工作函数，每个函数只订阅自己的专属主题。
+* **消息格式**:
+    * **消息体 (Data)**: `b"Go!"` 或其他通用元信息。
+    * **消息主题 (Subject)**: 消息的 `subject` 字段被设置为任务的 `job_id` (例如, "apod")，供工作函数识别。
+* **目的**: 实现 Topic-per-Function 模式，为每个工作函数提供一个隔离、无干扰的指令通道，彻底解决了事件过滤的平台限制问题。
 
-  * `scheduler-entry` 函数（来自 Cloud Scheduler）
-  * `manual-trigger` 函数（来自前端页面）
-* **订阅者**：各抓取函数订阅该主题，根据 job\_id 路由处理
-
-✅ 所有抓取函数仅通过 Pub/Sub 接收触发，确保无直接耦合。
+✅ 整个流程完全由事件驱动，服务之间无直接耦合。
 
 ---
 
 ## 2️⃣ Trace 流程与执行上下文
 
-* **trace\_id** 为每次执行的唯一标识符
+* **trace_id**: (规划中) 为每次执行的唯一标识符，其生成和传递的起点变为 `ns-func-dispatcher`。
+* **上下文传递**: `trace_id` 将写入日志、Firestore 状态表、返回值。
+* **生命周期流转 (规划中)**:
+    1.  **启动**: `ns-func-dispatcher` 在接收到调度信号后，为即将分发的每一批任务（例如6个每日任务）生成一个唯一的 `group_trace_id`。
+    2.  **分发**: `dispatcher` 向每个工作Topic发送消息时，将 `group_trace_id` 写入消息属性。
+    3.  **执行**: 每个工作函数在执行时，记录 `group_trace_id`，并可以生成自己的 `execution_id`。
+    4.  **状态记录**: 所有函数将状态写入 Firestore 时，都带上 `group_trace_id`，便于将一次调度触发的所有任务关联起来进行分析。
 
-  * 由触发端（scheduler/manual）生成
-  * 格式统一：`ns-<date>-<序号>` 形式，具备时间可读性
-* **上下文传递**：trace\_id 写入日志、FireStore 状态表、返回值
-* **生命周期流转**：
-
-  * 启动：trace\_id 写入 Firestore 中 status 表，标记 `status=pending`
-  * 成功：更新为 `status=success` 并记录元信息
-  * 失败：记录 `status=failed`，含错误原因
-
-✅ trace\_id 是全链路诊断、去重、重试的核心。
+✅ `group_trace_id` 是未来实现全链路诊断、去重、重试的核心。
 
 ---
 
 ## 3️⃣ 幂等性策略
 
-* **契约约定**：所有 Cloud Function 默认视为幂等任务
-* **实现方式**：
+* **契约约定**: 所有 **工作函数** (`worker functions`) 默认应设计为幂等。
+* **实现方式 (规划中)**:
+    * 接收到消息时，先查询 Firestore 中是否存在基于 Pub/Sub 消息 `event.id` 的执行记录。
+    * 若记录状态为 `SUCCESS` 则直接忽略（或打出日志 `already_processed`），防止因GCP重投递机制导致的重复执行。
+* **可选优化**: 将执行记录写入一个 `idempotency` 集合，避免状态表混杂。
 
-  * 接收到消息时，先查询 Firestore 中是否已存在 `trace_id` 执行记录（状态为 `success`）
-  * 若存在则直接忽略（或打出日志 `already_processed`）
-* **可选优化**：将执行记录写入一个 `idempotency` 集合，避免状态表混杂
-* **文档约定**：Terraform 中可在 description 字段标注 `"idempotent: true"`
-
-✅ 幂等性是系统稳定性基石，尤其在 Pub/Sub 重投递情形下。
+✅ 幂等性是系统稳定性基石，尤其在 Pub/Sub 至少一次的投递保障下。
 
 ---
 
 ## 4️⃣ 配置加载与缓存机制
 
-* 所有任务参数配置（如起止日期、抓取模式、目标源）保存在 Firestore 的 `job_config` 集合中
-* Cloud Function 启动时读取配置，但不缓存到内存
-* **热更新机制建议**（预留）：
+* **配置源**: (规划中) 所有任务参数配置（如API URL、特定参数等）保存在 Firestore 的 `job_config` 集合中。
+* **加载方式**: Cloud Function 启动时，根据自己的 `job_id` 从 `job_config` 集合中读取对应的文档。
+* **热更新机制**: Firestore 的特性天然支持配置的热更新。修改 Firestore 中的文档，下一次函数执行就会自动加载新配置，无需重新部署。
 
-  * 配置更新时发布 `config_updated` 事件到 Pub/Sub
-  * 函数监听该事件并刷新本地缓存（如后期使用 long-running Job）
-
-✅ 保留“配置即事件”的设计能力，支持未来演进为“GitOps 式配置系统”
+✅ 保留“配置即事件”的设计能力，支持未来演进为“GitOps 式配置系统”。
 
 ---
 
 ## 5️⃣ 前端与后端交互逻辑
 
-* **前端页面部署**：静态 HTML 页面部署于 Cloud Run Service
-* **功能职责**：展示任务配置状态，可能包含手动触发按钮
-* **交互方式**：
+* **前端页面部署**: (规划中) 静态 HTML 页面部署于 Cloud Run Service。
+* **功能职责**: 展示任务配置状态，并可能提供手动触发入口。
+* **交互方式 (手动触发)**:
+    * 前端页面发起 HTTP 请求到一个专门的 `manual_trigger` 函数 (尚未创建)。
+    * 该函数直接向**指定的 `ns-topic-[job_id]`** 发布消息，绕过总调度，实现对单个任务的精准触发。
 
-  * 发起 HTTP 请求到 `manual_trigger` Cloud Function
-  * 函数根据传参生成 trace\_id 并发布 Pub/Sub 消息
-  * 前端不直接接触 Firestore，仅通过函数间接访问
-
-✅ 安全、可审计、权限清晰
+✅ 手动触发与定时触发路径分离，安全、可审计、权限清晰。
 
 ---
 
 ## 6️⃣ 日志结构与追踪策略
 
-* 所有日志均结构化输出：`textPayload` ➜ `jsonPayload`
-* 必含字段：
-
-```json
-{
-  "severity": "INFO|ERROR",
-  "trace_id": "ns-20250904-001",
-  "job_id": "apod-20250904",
-  "function": "apod-fetcher",
-  "status": "success|fail",
-  "message": "..."
-}
-```
-
-* **工具链**：GCP Logging + Log-based Metrics + Alert Policy
-* **统一 trace 输出**：日志中携带 trace\_id，方便聚合分析与过滤追踪
+* **日志结构**: 所有日志均应结构化输出 `jsonPayload`。
+* **必含字段 (规划中)**:
+    ```json
+    {
+      "severity": "INFO|ERROR",
+      "trace_id": "...",
+      "job_id": "apod",
+      "status": "success|fail",
+      "message": "...",
+      "duration_ms": 1234
+    }
+    ```
+* **工具链**: GCP Logging + Log-based Metrics + Alert Policy。
 
 ✅ 所有执行与异常均可定位、溯源、归因。
 
@@ -129,36 +121,27 @@
 
 ## 7️⃣ 错误处理与失败路径
 
-* **自动重试**：Cloud Function 默认启用最大重试 3 次（可调）
-* **死信队列 DLQ**：Pub/Sub 绑定 DLQ 主题，消息失败后投递至 DLQ
-* **失败处理器建议**：
+* **自动重试**: Cloud Function 的事件触发器默认启用重试机制。
+* **死信队列 (DLQ - Dead Letter Queue)**:
+    * **策略**: (规划中) 为**每一个**工作Topic (`ns-topic-[job_id]`) 都配置一个专属的死信队列。
+    * **优势**: 实现了失败的隔离。`apod` 任务的失败消息只会进入 `apod` 的死信队列，完全不会影响其他任务。
+    * **后续处理**: 可以创建一个统一的“死信处理函数”，来定期扫描所有死信队列，进行记录、告警或尝试修复。
 
-  * 独立失败任务收集函数
-  * 周期性扫描 DLQ，归档失败 trace\_id 与原始 payload
-  * 写入 Firestore `failures` 集合，供人工干预与统计分析
-
-✅ 失败是正常路径，系统必须能自愈而非依赖“喊人”
+✅ 失败是正常路径，系统必须能自愈而非依赖“喊人”。
 
 ---
 
-## ✅ 总结：技术设计十大原则
+## ✅ 总结：架构设计原则 (最终版)
 
-1. 所有流程均事件驱动（Pub/Sub）
-2. trace\_id 为全链路核心 ID
-3. 所有函数幂等，重试安全
-4. 配置集中管理，支持热更新
-5. 前端不可直接读/写数据库，权限隔离
-6. 日志结构统一，可聚合分析
-7. 错误路径有归宿（DLQ + 失败处理器）
-8. 所有资源由 Terraform 管理
-9. 函数独立部署，职责单一
-10. 文档与架构由 AI 协作生成，保持一致性
+1.  **全事件驱动**: 所有流程均由 Pub/Sub 事件触发，服务间无直接调用。
+2.  **高可靠路由**: 采用 **Topic-per-Function** 模式，确保消息精准投递，避免平台限制。
+3.  **职责单一**: Dispatcher只管分发，Worker只管执行，各司其职。
+4.  **幂等执行**: 工作函数应设计为幂等，确保重试安全。
+5.  **配置集中化**: (规划中) 应用逻辑与配置分离，配置存储于 Firestore 并支持热更新。
+6.  **日志结构化**: 所有日志以JSON格式输出，便于查询与监控。
+7.  **失败隔离**: (规划中) 通过为每个Topic设置专属DLQ，实现错误处理的隔离。
+8.  **基础设施即代码 (IaC)**: 所有资源由 Terraform 统一定义和管理。
+9.  **最小权限**: (规划中) 每个组件仅授予其完成工作所必需的最小IAM权限。
+10. **人机协作**: 文档与架构由人主导，AI辅助完成，保持高度一致性。
 
 ---
-
-📄 下一步建议查看：
-
-* [`ns-deployment-guide.md`](./ns-deployment-guide.md)：部署命令、环境变量与版本切换方案
-* [`ns-observability-guidelines.md`](./ns-observability-guidelines.md)：日志、告警与指标设计说明
-
-*本项目强调以设计为先、结构清晰、自动化优先，结合 AI 提升工程质量与维护效率。*
