@@ -12,8 +12,8 @@ resource "google_cloud_scheduler_job" "daily_scheduler" {
 resource "google_cloud_scheduler_job" "hourly_scheduler" {
   name      = "ns-scheduler-fast-hourly"
   region    = local.region
-  schedule  = "0 * * * *"
-  time_zone = "Asia/Hong_Kong"  # 香港时区
+  schedule  = "*/10 * * * *"
+  time_zone = "Asia/Hong_Kong"  # 香港时区 - 每10分钟执行
   pubsub_target {
     topic_name = google_pubsub_topic.scheduler_triggers_topic.id
     data       = base64encode(jsonencode({ schedule_type = "hourly" }))
