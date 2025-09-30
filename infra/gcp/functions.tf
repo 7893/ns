@@ -54,6 +54,9 @@ resource "google_cloudfunctions2_function" "worker_functions" {
     timeout_seconds       = 300
     max_instance_count    = 1
     min_instance_count    = 0
+    environment_variables = {
+      NASA_API_KEY = var.nasa_api_key
+    }
   }
 
   event_trigger {
