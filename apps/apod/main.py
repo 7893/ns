@@ -1,6 +1,7 @@
 import functions_framework
 import json
 import os
+import requests
 from datetime import datetime
 from google.cloud import storage
 from ns_packages import NASAClient, NASADataParser
@@ -29,16 +30,40 @@ def handle_pubsub(cloud_event):
         
         # 生成文件路径
         now = datetime.utcnow()
-        file_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}.json"
+        base_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}"
         
-        # 上传数据
-        blob = bucket.blob(file_path)
-        blob.upload_from_string(
+        # 保存元数据JSON
+        metadata_path = f"{base_path}_metadata.json"
+        metadata_blob = bucket.blob(metadata_path)
+        metadata_blob.upload_from_string(
             json.dumps(parsed_data, indent=2, ensure_ascii=False),
             content_type='application/json'
         )
         
-        file_url = f"gs://ns-2025-data/{file_path}"
+        # 下载并保存图片文件
+        if parsed_data.get('media_type') == 'image':
+            image_url = parsed_data.get('hdurl') or parsed_data.get('url')
+            if image_url:
+                # 下载图片
+                response = requests.get(image_url, timeout=30)
+                response.raise_for_status()
+                
+                # 获取文件扩展名
+                file_ext = image_url.split('.')[-1].lower()
+                if file_ext not in ['jpg', 'jpeg', 'png', 'gif']:
+                    file_ext = 'jpg'
+                
+                # 保存图片
+                image_path = f"{base_path}.{file_ext}"
+                image_blob = bucket.blob(image_path)
+                image_blob.upload_from_string(
+                    response.content,
+                    content_type=f'image/{file_ext}'
+                )
+                
+                print(f"Image saved to: gs://ns-2025-data/{image_path}")
+        
+        print(f"Metadata saved to: gs://ns-2025-data/{metadata_path}")
         
         # 输出结构化日志
         log_entry = NASADataParser.create_log_entry(
@@ -46,7 +71,6 @@ def handle_pubsub(cloud_event):
             status="SUCCESS",
             data=parsed_data
         )
-        print(f"Data saved to: {file_url}")
         print(log_entry)
         
     except Exception as e:
