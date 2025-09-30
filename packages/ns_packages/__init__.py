@@ -2,6 +2,7 @@
 
 from .client.http_client import NASAClient
 from .parser.nasa_parser import NASADataParser
+from .storage import GCSStorage
 
 __version__ = "0.1.0"
-__all__ = ["NASAClient", "NASADataParser"]
+__all__ = ["NASAClient", "NASADataParser", "GCSStorage"]
