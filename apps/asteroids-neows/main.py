@@ -1,5 +1,7 @@
 import functions_framework
+import json
 from datetime import datetime, timedelta
+from google.cloud import storage
 from ns_packages import NASAClient, NASADataParser
 
 @functions_framework.cloud_event
@@ -26,6 +28,23 @@ def handle_pubsub(cloud_event):
         
         # 使用共享解析器处理数据
         parsed_data = NASADataParser.parse_asteroids(raw_data)
+        
+        # 保存数据到GCS
+        storage_client = storage.Client()
+        bucket = storage_client.bucket("ns-2025-data")
+        
+        # 生成文件路径
+        now = datetime.utcnow()
+        file_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}.json"
+        
+        # 上传数据
+        blob = bucket.blob(file_path)
+        blob.upload_from_string(
+            json.dumps(parsed_data, indent=2, ensure_ascii=False),
+            content_type='application/json'
+        )
+        
+        print(f"Data saved to: gs://ns-2025-data/{file_path}")
         
         # 输出结构化日志
         log_entry = NASADataParser.create_log_entry(
