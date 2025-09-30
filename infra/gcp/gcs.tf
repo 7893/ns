@@ -1,7 +1,7 @@
 # 代码源桶（美国中部区域，永久保存数据）
 resource "google_storage_bucket" "function_source_code" {
   name          = "ns-2025"
-  location      = "US-CENTRAL1"  # 美国中部区域
+  location      = upper(local.region)  # 使用统一的区域配置
   force_destroy = true
   
   # 永久保存数据 - 移除生命周期删除规则
@@ -11,7 +11,7 @@ resource "google_storage_bucket" "function_source_code" {
 # 数据存储桶（用于NASA数据持久化）
 resource "google_storage_bucket" "nasa_data_storage" {
   name          = "ns-2025-data"
-  location      = "US-CENTRAL1"  # 美国中部区域
+  location      = upper(local.region)  # 使用统一的区域配置
   force_destroy = false  # 防止意外删除
   
   # 启用版本控制
