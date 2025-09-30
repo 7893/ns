@@ -20,6 +20,9 @@ resource "google_cloudfunctions2_function" "dispatcher_function" {
     timeout_seconds       = 60
     max_instance_count    = 1
     min_instance_count    = 0
+    environment_variables = {
+      GCP_PROJECT = local.project_id
+    }
   }
 
   event_trigger {

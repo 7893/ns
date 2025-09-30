@@ -30,11 +30,11 @@ def handle_pubsub(event, context):
     for job_id in jobs_to_dispatch:
         try:
             # Dynamically construct the topic path for each job
-            topic_path = publisher.topic_path(PROJECT_ID, f"topic-{job_id}")
+            topic_path = publisher.topic_path(PROJECT_ID, f"ns-topic-{job_id}")
             # Publish a simple message; the function is triggered by the topic itself
             future = publisher.publish(topic_path, b"Go!", subject=job_id)
             future.result()
-            print(f"Successfully dispatched job to topic: topic-{job_id}")
+            print(f"Successfully dispatched job to topic: ns-topic-{job_id}")
         except Exception as e:
-            print(f"Error dispatching to topic-{job_id}: {e}")
+            print(f"Error dispatching to ns-topic-{job_id}: {e}")
     print("Dispatcher finished.")
