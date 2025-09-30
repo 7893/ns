@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: 'Test Functions'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e packages/
+        pip install -r requirements.txt
+    
+    - name: Test APOD function
+      run: |
+        cd apps/apod
+        python -c "
+        import sys
+        sys.path.insert(0, '../../packages')
+        from main import handle_pubsub
+        
+        class MockEvent:
+            def __init__(self):
+                self.data = {'message': {'attributes': {'subject': 'apod'}}}
+        
+        handle_pubsub(MockEvent())
+        print('✅ APOD function test passed')
+        "
+    
+    - name: Test Asteroids function
+      run: |
+        cd apps/asteroids-neows
+        python -c "
+        import sys
+        sys.path.insert(0, '../../packages')
+        from main import handle_pubsub
+        
+        class MockEvent:
+            def __init__(self):
+                self.data = {'message': {'attributes': {'subject': 'asteroids-neows'}}}
+        
+        handle_pubsub(MockEvent())
+        print('✅ Asteroids function test passed')
+        "
+      env:
+        NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
