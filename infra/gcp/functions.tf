@@ -7,9 +7,11 @@ resource "google_cloudfunctions2_function" "dispatcher_function" {
     runtime     = "python311"
     entry_point = "handle_pubsub"
     source {
-      storage_source {
-        bucket = google_storage_bucket.function_source_code.name
-        object = google_storage_bucket_object.source_objects["dispatcher"].name
+      repo_source {
+        project_id   = local.project_id
+        repo_name    = "github_7893_ns"
+        branch_name  = "main"
+        dir          = "apps/dispatcher"
       }
     }
   }
@@ -41,9 +43,11 @@ resource "google_cloudfunctions2_function" "worker_functions" {
     runtime     = "python311"
     entry_point = "handle_pubsub"
     source {
-      storage_source {
-        bucket = google_storage_bucket.function_source_code.name
-        object = google_storage_bucket_object.source_objects[each.key].name
+      repo_source {
+        project_id   = local.project_id
+        repo_name    = "github_7893_ns"
+        branch_name  = "main"
+        dir          = "apps/${each.key}"
       }
     }
   }
