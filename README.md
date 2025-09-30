@@ -60,3 +60,4 @@ cd apps/apod && python main.py
 ```bash
 gcloud functions logs read ns-func-apod --region=us-central1
 ```
+# NASA 数据聚合系统已配置完成 🚀
