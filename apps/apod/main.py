@@ -1,53 +1,39 @@
-import base64
-import json
-import os
 import functions_framework
-import requests
-
-# --- 配置 ---
-NASA_API_KEY = os.getenv("NASA_API_KEY", "DEMO_KEY")
-APOD_API_URL = "https://api.nasa.gov/planetary/apod"
-# --- 配置结束 ---
-
+from ns_packages import NASAClient, NASADataParser
 
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
-    """
-    接收来自 Pub/Sub 的事件，从 NASA API 获取每日天文图。
-    """
-    # 从 Pub/Sub 消息的属性中获取 job_id
+    """获取NASA每日天文图片"""
+    
+    # 获取job_id
     attributes = cloud_event.data.get("message", {}).get("attributes", {})
-    job_id = attributes.get("job_id", "unknown_job")
+    job_id = attributes.get("subject", "apod")
     
-    print(f"--- Function '{job_id}' received event ID: {cloud_event['id']} ---")
-
+    print(f"--- Function '{job_id}' started ---")
+    
     try:
-        # 1. 准备并调用NASA API
-        params = {"api_key": NASA_API_KEY}
-        print(f"Calling APOD API at: {APOD_API_URL}")
-        response = requests.get(APOD_API_URL, params=params, timeout=30)
-        response.raise_for_status()
-
-        # 2. 解析返回的JSON数据
-        apod_data = response.json()
-        print("Successfully fetched data from NASA API.")
-
-        # 3. 准备并打印结构化日志
-        log_payload = {
-            "status": "SUCCESS",
-            "job_id": job_id,
-            "api_data": {
-                "date": apod_data.get("date"),
-                "title": apod_data.get("title"),
-                "url": apod_data.get("url"),
-                "media_type": apod_data.get("media_type"),
-            }
-        }
-        print(json.dumps(log_payload))
-
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: API request failed. Error: {e}")
+        # 使用共享客户端获取数据
+        client = NASAClient()
+        raw_data = client.get_apod()
+        
+        # 使用共享解析器处理数据
+        parsed_data = NASADataParser.parse_apod(raw_data)
+        
+        # 输出结构化日志
+        log_entry = NASADataParser.create_log_entry(
+            job_id=job_id,
+            status="SUCCESS",
+            data=parsed_data
+        )
+        print(log_entry)
+        
     except Exception as e:
-        print(f"ERROR: An unexpected error occurred. Error: {e}")
+        # 错误处理
+        error_log = NASADataParser.create_log_entry(
+            job_id=job_id,
+            status="ERROR",
+            error=str(e)
+        )
+        print(error_log)
     
-    print(f"--- Function '{job_id}' finished. ---")
+    print(f"--- Function '{job_id}' finished ---")
