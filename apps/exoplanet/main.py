@@ -13,8 +13,11 @@ def handle_pubsub(cloud_event):
     job_id = attributes.get("subject", "exoplanet")
     
     print(f"--- Function '{job_id}' started ---")
+    print(f"Cloud event data: {cloud_event.data}")
+    print(f"Attributes: {attributes}")
     
     try:
+        print("Starting API call...")
         # 使用新的NASA Exoplanet Archive TAP服务
         url = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
         params = {
@@ -22,15 +25,20 @@ def handle_pubsub(cloud_event):
             "format": "json"
         }
         
+        print(f"Making request to: {url}")
         response = requests.get(url, params=params, timeout=60)
+        print(f"Response status: {response.status_code}")
         response.raise_for_status()
         data = response.json()
+        print(f"Got {len(data)} records")
         
+        print("Initializing storage client...")
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")
         
         now = datetime.utcnow()
         file_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}.json"
+        print(f"Saving to: {file_path}")
         
         blob = bucket.blob(file_path)
         blob.upload_from_string(
@@ -49,9 +57,11 @@ def handle_pubsub(cloud_event):
         
     except Exception as e:
         print(f"Exoplanet API error: {str(e)}")
+        print(f"Exception type: {type(e)}")
         
         # 创建fallback数据
         try:
+            print("Creating fallback data...")
             storage_client = storage.Client()
             bucket = storage_client.bucket("ns-2025-data")
             
