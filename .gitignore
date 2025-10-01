@@ -53,6 +53,7 @@ terraform.tfvars.json
 gcp-*.json
 service-account*.json
 credentials*.json
+gce-service-account-key.json
 
 # === Environment ===
 .env
