@@ -22,7 +22,7 @@ resource "google_storage_bucket" "function_source_code" {
 
 # 创建源代码压缩包
 data "archive_file" "source_archives" {
-  for_each = local.all_functions
+  for_each = local.functions
 
   type        = "zip"
   source_dir  = "${path.module}/../../apps/${each.key}"
@@ -31,7 +31,7 @@ data "archive_file" "source_archives" {
 
 # 上传源代码到GCS
 resource "google_storage_bucket_object" "source_objects" {
-  for_each = local.all_functions
+  for_each = local.functions
 
   name   = "source/${each.key}/${data.archive_file.source_archives[each.key].output_md5}.zip"
   bucket = google_storage_bucket.function_source_code.name
