@@ -1,29 +1,40 @@
 # NS - NASA Data System
 
-Automated NASA data collection and processing on Google Cloud Platform.
+极简化的NASA数据收集系统，基于单函数统一架构。
 
-## Features
+## 架构
 
-- Collects NASA API data automatically
-- Event-driven architecture
-- Scheduled data processing
-- Cloud-based storage and monitoring
+- **1个函数**: `ns-func-unified` - 处理所有NASA API
+- **1个Topic**: `ns-topic-unified` - 统一消息队列  
+- **3个调度器**: 每日/每小时/每周自动收集
+- **12个数据源**: APOD, 小行星, DONKI, EONET, EPIC, 火星照片, 图像库, 系外行星, 基因实验室, 技术组合, 技术转移, 地球图像
 
-## Setup
+## 快速开始
 
 ```bash
-./activate.sh
-pip install -e packages/
+# 设置环境
+export NASA_API_KEY="your-key"
+
+# 部署
+./scripts/deploy.sh
+
+# 监控
+gcloud functions logs read ns-func-unified --region=us-central1
 ```
 
-## Deploy
+## 手动触发
 
 ```bash
-./scripts/deploy_one.sh
+# 触发每日收集
+gcloud pubsub topics publish ns-topic-unified --message='{"schedule_type": "daily"}'
+
+# 触发单个数据源
+gcloud pubsub topics publish ns-topic-unified --attribute="source=apod"
 ```
 
-## Monitor
+## 数据存储
 
-```bash
-gcloud functions logs read ns-func-apod --region=us-central1
+所有数据保存在 `gs://ns-2025-data/` 按以下结构组织：
+```
+{source}/{year}/{month}/{day}/{timestamp}.json
 ```

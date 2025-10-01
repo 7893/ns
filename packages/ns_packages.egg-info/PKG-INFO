@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: ns-packages
-Version: 0.1.0
-Summary: NASA数据聚合系统共享包
-Requires-Python: >=3.11
-Requires-Dist: requests>=2.25.0
-Dynamic: requires-dist
-Dynamic: requires-python
-Dynamic: summary
