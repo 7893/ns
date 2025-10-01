@@ -24,9 +24,9 @@ variable "nasa_api_key" {
   sensitive   = true
 }
 
-# === 存储桶 ===
+# === 数据存储桶 ===
 resource "google_storage_bucket" "nasa_data" {
-  name          = "ns-2025-data"
+  name          = "ns-data-2025"
   location      = "US-CENTRAL1"
   force_destroy = false
 
@@ -36,7 +36,7 @@ resource "google_storage_bucket" "nasa_data" {
 }
 
 resource "google_storage_bucket" "function_source" {
-  name          = "ns-2025"
+  name          = "ns-source-2025"
   location      = "US-CENTRAL1"
   force_destroy = true
 }

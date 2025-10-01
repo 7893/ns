@@ -34,7 +34,7 @@ gcloud pubsub topics publish ns-topic-unified --attribute="source=apod"
 
 ## 数据存储
 
-所有数据保存在 `gs://ns-2025-data/` 按以下结构组织：
+所有数据保存在 `gs://ns-data-2025/` 按以下结构组织：
 ```
 {source}/{year}/{month}/{day}/{timestamp}.json
 ```
