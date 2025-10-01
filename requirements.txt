@@ -10,7 +10,11 @@ Flask==3.1.2
 functions-framework==3.9.2
 google-api-core==2.25.1
 google-auth==2.41.0
+google-cloud-core==2.4.3
 google-cloud-pubsub==2.31.1
+google-cloud-storage==3.4.0
+google-crc32c==1.7.1
+google-resumable-media==2.7.2
 googleapis-common-protos==1.70.0
 grpc-google-iam-v1==0.14.2
 grpcio==1.75.1
@@ -22,6 +26,7 @@ importlib_metadata==8.7.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
+-e git+ssh://git@github.com/7893/ns.git@bad78f280e3a40a78fa4cde3a478cf9cc3026784#egg=ns_packages&subdirectory=packages
 opentelemetry-api==1.37.0
 opentelemetry-sdk==1.37.0
 opentelemetry-semantic-conventions==0.58b0

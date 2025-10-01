@@ -29,3 +29,16 @@ class NASAClient:
             "start_date": start_date,
             "end_date": end_date
         })
+    
+    def get_mars_rover_photos(self, rover: str = "perseverance") -> Dict[str, Any]:
+        """获取火星车照片"""
+        return self.get(f"mars-photos/api/v1/rovers/{rover}/latest_photos")
+    
+    def get_earth_imagery(self, lon: float, lat: float, date: str, dim: float = 0.15) -> Dict[str, Any]:
+        """获取地球卫星图片"""
+        return self.get("planetary/earth/imagery", {
+            "lon": lon,
+            "lat": lat,
+            "date": date,
+            "dim": dim
+        })

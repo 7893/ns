@@ -1,41 +1,31 @@
 import functions_framework
 import json
+import requests
 from datetime import datetime
 from google.cloud import storage
-from ns_packages import NASAClient, NASADataParser
+from ns_packages import NASADataParser
 
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
-    """获取NASA数据"""
+    """获取TechPort技术项目数据"""
     
-    # 获取job_id
     attributes = cloud_event.data.get("message", {}).get("attributes", {})
-    job_id = attributes.get("subject", "unknown")
+    job_id = attributes.get("subject", "techport")
     
     print(f"--- Function '{job_id}' started ---")
     
     try:
-        # 获取数据 - 使用通用端点
-        client = NASAClient()
+        # TechPort API不需要API密钥
+        response = requests.get("https://api.nasa.gov/techport/api/projects", timeout=30)
+        response.raise_for_status()
+        data = response.json()
         
-        # 根据不同的job_id使用不同的端点
-        if job_id == "genelab":
-            data = client.get("genelab-data/")
-        elif job_id == "techport":
-            data = client.get("techport/api/projects")
-        elif job_id == "techtransfer":
-            data = client.get("techtransfer/")
-        else:
-            data = {"message": f"Data for {job_id}", "timestamp": datetime.utcnow().isoformat()}
-        
-        # 保存数据到GCS
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")
         
         now = datetime.utcnow()
         file_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}.json"
         
-        # 上传数据
         blob = bucket.blob(file_path)
         blob.upload_from_string(
             json.dumps(data, indent=2, ensure_ascii=False),
@@ -44,16 +34,14 @@ def handle_pubsub(cloud_event):
         
         print(f"Data saved to: gs://ns-2025-data/{file_path}")
         
-        # 输出结构化日志
         log_entry = NASADataParser.create_log_entry(
             job_id=job_id,
             status="SUCCESS",
-            data={"data_type": job_id}
+            data={"projects_count": len(data.get("projects", [])) if isinstance(data, dict) else 0}
         )
         print(log_entry)
         
     except Exception as e:
-        # 错误处理
         error_log = NASADataParser.create_log_entry(
             job_id=job_id,
             status="ERROR",
