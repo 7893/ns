@@ -32,6 +32,7 @@ out/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 *.tfplan
 tfplan
 crash.log
@@ -40,6 +41,7 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 **/*.tfvars
+terraform.tfvars.json
 
 # === GCP ===
 *.json
@@ -51,6 +53,8 @@ override.tf.json
 .env
 .env.*
 !.env.example
+.envrc
+.secrets
 
 # === Misc ===
 .idea/
