@@ -11,7 +11,7 @@ terraform {
       version = "~> 2.0"
     }
   }
-  
+
   backend "gcs" {
     bucket = "ns-terraform-state-2025"
     prefix = "terraform/state"
