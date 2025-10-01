@@ -1,13 +1,19 @@
 import functions_framework
 import json
+import logging
 from datetime import datetime
 from google.cloud import storage
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
+    logger.info("Function started")
     print("Function started")
     
     try:
+        logger.info("Creating storage client")
         print("Creating storage client")
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")
