@@ -29,7 +29,7 @@ resource "google_storage_bucket" "nasa_data" {
   name          = "ns-2025-data"
   location      = "US-CENTRAL1"
   force_destroy = false
-  
+
   versioning {
     enabled = true
   }
