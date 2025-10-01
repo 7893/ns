@@ -1,8 +1,9 @@
 import functions_framework
 import json
+import requests
 from datetime import datetime
 from google.cloud import storage
-from ns_packages import NASAClient, NASADataParser
+from ns_packages import NASADataParser
 
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
@@ -14,13 +15,17 @@ def handle_pubsub(cloud_event):
     print(f"--- Function '{job_id}' started ---")
     
     try:
-        client = NASAClient()
-        
-        # 获取系外行星数据
-        data = client.get("exoplanet/records", {
+        # NASA Exoplanet Archive API (不需要API密钥)
+        response = requests.get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI", {
             "table": "exoplanets",
-            "format": "json"
-        })
+            "format": "json",
+            "select": "pl_name,pl_orbper,pl_bmasse,pl_rade,st_dist",
+            "where": "pl_orbper<365 and pl_bmasse>0",
+            "order": "pl_name",
+            "limit": 100
+        }, timeout=30)
+        response.raise_for_status()
+        data = response.json()
         
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")
@@ -39,7 +44,7 @@ def handle_pubsub(cloud_event):
         log_entry = NASADataParser.create_log_entry(
             job_id=job_id,
             status="SUCCESS",
-            data={"records_count": len(data) if isinstance(data, list) else 0}
+            data={"exoplanets_count": len(data) if isinstance(data, list) else 0}
         )
         print(log_entry)
         

@@ -1,9 +1,8 @@
 import functions_framework
 import json
-import requests
 from datetime import datetime
 from google.cloud import storage
-from ns_packages import NASADataParser
+from ns_packages import NASAClient, NASADataParser
 
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
@@ -15,13 +14,13 @@ def handle_pubsub(cloud_event):
     print(f"--- Function '{job_id}' started ---")
     
     try:
-        # NASA技术转移API
-        response = requests.get("https://api.nasa.gov/techtransfer/patent/", {
+        client = NASAClient()
+        
+        # 获取技术转移专利数据
+        data = client.get("techtransfer/patent/", {
             "engine": "patent",
             "format": "json"
-        }, timeout=30)
-        response.raise_for_status()
-        data = response.json()
+        })
         
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")

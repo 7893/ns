@@ -1,9 +1,8 @@
 import functions_framework
 import json
-import requests
 from datetime import datetime
 from google.cloud import storage
-from ns_packages import NASADataParser
+from ns_packages import NASAClient, NASADataParser
 
 @functions_framework.cloud_event
 def handle_pubsub(cloud_event):
@@ -15,10 +14,10 @@ def handle_pubsub(cloud_event):
     print(f"--- Function '{job_id}' started ---")
     
     try:
-        # TechPort API不需要API密钥
-        response = requests.get("https://api.nasa.gov/techport/api/projects", timeout=30)
-        response.raise_for_status()
-        data = response.json()
+        client = NASAClient()
+        
+        # 获取TechPort项目列表
+        data = client.get("techport/api/projects")
         
         storage_client = storage.Client()
         bucket = storage_client.bucket("ns-2025-data")
