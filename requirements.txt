@@ -26,7 +26,7 @@ importlib_metadata==8.7.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
--e git+ssh://git@github.com/7893/ns.git@bad78f280e3a40a78fa4cde3a478cf9cc3026784#egg=ns_packages&subdirectory=packages
+# ns_packages installed via pip install -e packages/
 opentelemetry-api==1.37.0
 opentelemetry-sdk==1.37.0
 opentelemetry-semantic-conventions==0.58b0
