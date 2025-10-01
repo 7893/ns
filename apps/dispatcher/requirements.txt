@@ -1,2 +1,2 @@
-functions-framework
-google-cloud-pubsub
+functions-framework==3.*
+google-cloud-pubsub==2.*

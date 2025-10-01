@@ -1,3 +1,4 @@
+import functions_framework
 import base64
 import json
 import os
@@ -11,14 +12,24 @@ SCHEDULE_MAP = {
     "weekly": ["exoplanet", "genelab", "techport", "techtransfer", "earth"]
 }
 
-publisher = pubsub_v1.PublisherClient()
-
-def handle_pubsub(event, context):
+@functions_framework.cloud_event
+def handle_pubsub(cloud_event):
     print(f"Dispatcher received trigger event.")
+    
+    # 延迟初始化publisher
+    publisher = pubsub_v1.PublisherClient()
+    
     try:
-        data_str = base64.b64decode(event["data"]).decode("utf-8")
-        data_json = json.loads(data_str)
-        schedule_type = data_json.get("schedule_type")
+        # 从Cloud Event中获取数据
+        message_data = cloud_event.data.get("message", {}).get("data", "")
+        if message_data:
+            data_str = base64.b64decode(message_data).decode("utf-8")
+            data_json = json.loads(data_str)
+            schedule_type = data_json.get("schedule_type")
+        else:
+            # 如果没有数据，默认为daily
+            schedule_type = "daily"
+            
         if not schedule_type:
             raise ValueError("'schedule_type' not found.")
         print(f"Dispatching jobs for schedule: {schedule_type}")
