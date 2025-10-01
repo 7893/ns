@@ -47,35 +47,42 @@ jobs:
     - name: Terraform Init
       run: terraform init
     
-    - name: Check Infrastructure State
-      id: check_state
+    - name: Drift Detection
+      id: drift
       run: |
-        echo "🔍 检查基础设施状态..."
-        # 检查关键资源是否存在
-        if gsutil ls gs://ns-2025-data/ >/dev/null 2>&1 && \
-           gcloud pubsub topics describe ns-topic-scheduler-triggers >/dev/null 2>&1 && \
-           gcloud functions describe ns-func-dispatcher --region=us-central1 >/dev/null 2>&1; then
-          echo "✅ 核心基础设施已存在且正常运行"
-          echo "needs_apply=false" >> $GITHUB_OUTPUT
+        echo "🔍 检测基础设施漂移..."
+        set +e
+        terraform plan -detailed-exitcode -var="nasa_api_key=${{ secrets.NASA_API_KEY }}" -out=plan.out
+        exit_code=$?
+        set -e
+        
+        if [ $exit_code -eq 0 ]; then
+          echo "✅ 无变更需要"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        elif [ $exit_code -eq 2 ]; then
+          echo "📋 检测到变更"
+          echo "has_changes=true" >> $GITHUB_OUTPUT
         else
-          echo "📋 需要部署基础设施"
-          echo "needs_apply=true" >> $GITHUB_OUTPUT
+          echo "❌ Terraform plan 失败"
+          exit 1
         fi
     
     - name: Terraform Format
       run: terraform fmt -check
     
-    - name: Terraform Plan
-      run: terraform plan -no-color -var="nasa_api_key=${{ secrets.NASA_API_KEY }}"
-      if: github.event_name == 'pull_request'
+    - name: Show Plan (PR)
+      if: github.event_name == 'pull_request' && steps.drift.outputs.has_changes == 'true'
+      run: |
+        echo "## Terraform Plan" >> $GITHUB_STEP_SUMMARY
+        terraform show -no-color plan.out >> $GITHUB_STEP_SUMMARY
     
     - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.drift.outputs.has_changes == 'true'
       run: |
         echo "🚀 应用基础设施更改..."
-        terraform apply -auto-approve -var="nasa_api_key=${{ secrets.NASA_API_KEY }}"
+        terraform apply -auto-approve plan.out
         echo "✅ 基础设施部署完成"
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.check_state.outputs.needs_apply == 'true'
     
     - name: Skip Apply
-      run: echo "⏭️ 跳过部署 - 基础设施已是最新状态"
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.check_state.outputs.needs_apply == 'false'
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.drift.outputs.has_changes == 'false'
+      run: echo "⏭️ 跳过部署 - 无变更需要"
