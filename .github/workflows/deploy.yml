@@ -47,6 +47,21 @@ jobs:
     - name: Terraform Init
       run: terraform init
     
+    - name: Check Infrastructure State
+      id: check_state
+      run: |
+        echo "🔍 检查基础设施状态..."
+        # 检查关键资源是否存在
+        if gsutil ls gs://ns-2025-data/ >/dev/null 2>&1 && \
+           gcloud pubsub topics describe ns-topic-scheduler-triggers >/dev/null 2>&1 && \
+           gcloud functions describe ns-func-dispatcher --region=us-central1 >/dev/null 2>&1; then
+          echo "✅ 核心基础设施已存在且正常运行"
+          echo "needs_apply=false" >> $GITHUB_OUTPUT
+        else
+          echo "📋 需要部署基础设施"
+          echo "needs_apply=true" >> $GITHUB_OUTPUT
+        fi
+    
     - name: Terraform Format
       run: terraform fmt -check
     
@@ -55,5 +70,12 @@ jobs:
       if: github.event_name == 'pull_request'
     
     - name: Terraform Apply
-      run: terraform apply -auto-approve -var="nasa_api_key=${{ secrets.NASA_API_KEY }}"
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        echo "🚀 应用基础设施更改..."
+        terraform apply -auto-approve -var="nasa_api_key=${{ secrets.NASA_API_KEY }}"
+        echo "✅ 基础设施部署完成"
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.check_state.outputs.needs_apply == 'true'
+    
+    - name: Skip Apply
+      run: echo "⏭️ 跳过部署 - 基础设施已是最新状态"
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && steps.check_state.outputs.needs_apply == 'false'
