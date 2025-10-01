@@ -25,7 +25,7 @@ data "archive_file" "source_archives" {
   for_each = local.functions
 
   type        = "zip"
-  source_dir  = "${path.module}/../../apps/${each.key}"
+  source_dir  = "${path.module}/../../apps/${each.value}"
   output_path = "/tmp/source-${each.key}.zip"
 }
 
