@@ -23,6 +23,12 @@ provider "google" {
   region  = "us-central1"
 }
 
+variable "project_id" {
+  description = "GCP Project ID"
+  type        = string
+  default     = "sigma-outcome"
+}
+
 variable "nasa_api_key" {
   description = "NASA API Key"
   type        = string
@@ -38,6 +44,14 @@ resource "google_storage_bucket" "nasa_data" {
   versioning {
     enabled = true
   }
+}
+
+# === Artifact Registry ===
+resource "google_artifact_registry_repository" "functions" {
+  location      = "us-central1"
+  repository_id = "ns-functions"
+  description   = "NS Functions Docker Repository"
+  format        = "DOCKER"
 }
 
 # === Pub/Sub Topic ===
@@ -64,8 +78,9 @@ resource "google_cloudfunctions2_function" "unified" {
   location = "us-central1"
 
   build_config {
-    runtime     = "python311"
-    entry_point = "handle_all"
+    runtime           = "python311"
+    entry_point       = "handle_all"
+    docker_repository = "projects/${var.project_id}/locations/us-central1/repositories/ns-functions"
     source {
       storage_source {
         bucket = google_storage_bucket.nasa_data.name
