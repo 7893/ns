@@ -13,7 +13,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "ns-terraform-state-2025"
+    bucket = "ns-data-2025"
     prefix = "terraform/state"
   }
 }
@@ -40,12 +40,6 @@ resource "google_storage_bucket" "nasa_data" {
   }
 }
 
-resource "google_storage_bucket" "function_source" {
-  name          = "ns-source-2025"
-  location      = "US-CENTRAL1"
-  force_destroy = true
-}
-
 # === Pub/Sub Topic ===
 resource "google_pubsub_topic" "unified" {
   name = "ns-topic-unified"
@@ -59,8 +53,8 @@ data "archive_file" "function_source" {
 }
 
 resource "google_storage_bucket_object" "function_source" {
-  name   = "source/nasa-unified/${data.archive_file.function_source.output_md5}.zip"
-  bucket = google_storage_bucket.function_source.name
+  name   = "functions/nasa-unified/${data.archive_file.function_source.output_md5}.zip"
+  bucket = google_storage_bucket.nasa_data.name
   source = data.archive_file.function_source.output_path
 }
 
@@ -74,7 +68,7 @@ resource "google_cloudfunctions2_function" "unified" {
     entry_point = "handle_all"
     source {
       storage_source {
-        bucket = google_storage_bucket.function_source.name
+        bucket = google_storage_bucket.nasa_data.name
         object = google_storage_bucket_object.function_source.name
       }
     }
