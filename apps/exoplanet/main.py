@@ -15,15 +15,14 @@ def handle_pubsub(cloud_event):
     print(f"--- Function '{job_id}' started ---")
     
     try:
-        # NASA Exoplanet Archive API (不需要API密钥)
-        response = requests.get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI", {
-            "table": "exoplanets",
-            "format": "json",
-            "select": "pl_name,pl_orbper,pl_bmasse,pl_rade,st_dist",
-            "where": "pl_orbper<365 and pl_bmasse>0",
-            "order": "pl_name",
-            "limit": 100
-        }, timeout=30)
+        # 使用新的NASA Exoplanet Archive TAP服务
+        url = "https://exoplanetarchive.ipac.caltech.edu/TAP/sync"
+        params = {
+            "query": "select top 100 pl_name,hostname,disc_year,pl_orbper,pl_bmasse,pl_rade from ps where disc_year > 2020 order by disc_year desc",
+            "format": "json"
+        }
+        
+        response = requests.get(url, params=params, timeout=60)
         response.raise_for_status()
         data = response.json()
         
