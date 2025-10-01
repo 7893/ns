@@ -5,6 +5,7 @@ set -e
 
 echo "🚀 NS - NASA Data System 完整部署"
 echo "区域: us-central1 (美国中部)"
+echo "时区: Asia/Hong_Kong (香港时区)"
 
 # 检查环境
 if [ -z "$NASA_API_KEY" ]; then
@@ -36,7 +37,7 @@ echo ""
 echo "📊 系统信息:"
 echo "- 函数: ns-func-unified"
 echo "- Topic: ns-topic-unified" 
-echo "- 调度器: 每日/每小时/每周"
+echo "- 调度器: 每日/每小时/每周 (香港时区)"
 echo "- 区域: us-central1"
 echo ""
 echo "🔍 监控命令:"
