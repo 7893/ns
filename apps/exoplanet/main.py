@@ -48,6 +48,34 @@ def handle_pubsub(cloud_event):
         print(log_entry)
         
     except Exception as e:
+        print(f"Exoplanet API error: {str(e)}")
+        
+        # 创建fallback数据
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket("ns-2025-data")
+            
+            now = datetime.utcnow()
+            file_path = f"{job_id}/{now.year}/{now.month:02d}/{now.day:02d}/{now.strftime('%Y%m%d_%H%M%S')}_fallback.json"
+            
+            fallback_data = {
+                "message": f"Exoplanet API unavailable: {str(e)}",
+                "timestamp": now.isoformat(),
+                "fallback": True,
+                "service": "NASA Exoplanet Archive"
+            }
+            
+            blob = bucket.blob(file_path)
+            blob.upload_from_string(
+                json.dumps(fallback_data, indent=2, ensure_ascii=False),
+                content_type='application/json'
+            )
+            
+            print(f"Fallback data saved to: gs://ns-2025-data/{file_path}")
+            
+        except Exception as fallback_error:
+            print(f"Fallback also failed: {fallback_error}")
+        
         error_log = NASADataParser.create_log_entry(
             job_id=job_id,
             status="ERROR",
