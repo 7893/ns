@@ -93,34 +93,34 @@ resource "google_cloudfunctions2_function" "unified" {
 
 # === 调度器 ===
 resource "google_cloud_scheduler_job" "daily" {
-  name         = "ns-unified-daily"
-  schedule     = "0 8 * * *"
-  time_zone    = "America/Chicago"
-  region       = "us-central1"
+  name      = "ns-unified-daily"
+  schedule  = "0 8 * * *"
+  time_zone = "America/Chicago"
+  region    = "us-central1"
   pubsub_target {
     topic_name = google_pubsub_topic.unified.id
-    data       = base64encode(jsonencode({"schedule_type": "daily"}))
+    data       = base64encode(jsonencode({ "schedule_type" : "daily" }))
   }
 }
 
 resource "google_cloud_scheduler_job" "hourly" {
-  name         = "ns-unified-hourly"
-  schedule     = "0 * * * *"
-  time_zone    = "America/Chicago"
-  region       = "us-central1"
+  name      = "ns-unified-hourly"
+  schedule  = "0 * * * *"
+  time_zone = "America/Chicago"
+  region    = "us-central1"
   pubsub_target {
     topic_name = google_pubsub_topic.unified.id
-    data       = base64encode(jsonencode({"schedule_type": "hourly"}))
+    data       = base64encode(jsonencode({ "schedule_type" : "hourly" }))
   }
 }
 
 resource "google_cloud_scheduler_job" "weekly" {
-  name         = "ns-unified-weekly"
-  schedule     = "0 9 * * 1"
-  time_zone    = "America/Chicago"
-  region       = "us-central1"
+  name      = "ns-unified-weekly"
+  schedule  = "0 9 * * 1"
+  time_zone = "America/Chicago"
+  region    = "us-central1"
   pubsub_target {
     topic_name = google_pubsub_topic.unified.id
-    data       = base64encode(jsonencode({"schedule_type": "weekly"}))
+    data       = base64encode(jsonencode({ "schedule_type" : "weekly" }))
   }
 }

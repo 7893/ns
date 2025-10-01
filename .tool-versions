@@ -1,6 +1,0 @@
-# NS Project Tool Versions
-# This file is managed by asdf. Run 'asdf install' to set up the environment.
-
-python 3.13.7
-terraform 1.13.3
-nodejs lts
