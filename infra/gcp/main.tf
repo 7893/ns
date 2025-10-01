@@ -29,9 +29,9 @@ resource "google_storage_bucket" "nasa_data" {
   name          = "ns-2025-data"
   location      = "US-CENTRAL1"
   force_destroy = false
-  
+
   versioning { enabled = true }
-  
+
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
@@ -46,7 +46,7 @@ resource "google_storage_bucket" "function_source" {
   name          = "ns-2025"
   location      = "US-CENTRAL1"
   force_destroy = true
-  
+
   lifecycle {
     ignore_changes = [
       location,
