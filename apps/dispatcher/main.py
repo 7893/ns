@@ -7,7 +7,7 @@ from google.cloud import pubsub_v1
 PROJECT_ID = os.getenv("GCP_PROJECT")
 
 SCHEDULE_MAP = {
-    "daily": ["apod", "asteroids-neows", "donki", "epic", "insight", "mars-rover-photos"],
+    "daily": ["apod", "asteroids-neows", "donki", "epic", "mars-rover-photos"],
     "hourly": ["eonet", "nasa-ivl"],
     "weekly": ["exoplanet", "genelab", "techport", "techtransfer", "earth"]
 }

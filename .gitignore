@@ -43,11 +43,16 @@ override.tf.json
 **/*.tfvars
 terraform.tfvars.json
 
-# === GCP ===
+# === GCP / Secrets ===
 *.json
 !package*.json
+!.github/**/*.json
 *.key
 *.pem
+*-sa-key.json
+gcp-*.json
+service-account*.json
+credentials*.json
 
 # === Environment ===
 .env
@@ -56,7 +61,21 @@ terraform.tfvars.json
 .envrc
 .secrets
 
+# === Testing / Development ===
+test_*.py
+*_test.py
+test_local.py
+test_function_local.py
+test_simple.py
+validate_*.py
+api_types_*.py
+*_analysis.py
+*_ANALYSIS.md
+API_*.md
+NASA_*.md
+temp_*.py
+tmp_*.py
+
 # === Misc ===
 .idea/
 .vscode/
-# Test commit

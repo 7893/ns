@@ -4,7 +4,7 @@
 
 ## 架构概览
 
-- **Cloud Functions**: 14个函数 (1个调度器 + 13个数据收集器)
+- **Cloud Functions**: 13个函数 (1个调度器 + 12个数据收集器)
 - **Pub/Sub**: 事件驱动消息传递
 - **Cloud Scheduler**: 定时任务调度
 - **Cloud Storage**: 代码和数据存储
