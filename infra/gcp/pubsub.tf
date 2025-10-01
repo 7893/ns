@@ -1,9 +1,4 @@
-# Scheduler triggers topic
-resource "google_pubsub_topic" "scheduler_triggers_topic" {
-  name = "ns-topic-scheduler-triggers"
-}
-
-# Main collector topic
-resource "google_pubsub_topic" "collector_topic" {
-  name = "ns-topic-collector"
+# 统一topic处理所有消息
+resource "google_pubsub_topic" "unified_topic" {
+  name = "ns-topic-unified"
 }
