@@ -1,0 +1,5 @@
+# 本地开发依赖
+functions-framework==3.*
+google-cloud-storage==2.*
+google-cloud-pubsub==2.*
+requests==2.*

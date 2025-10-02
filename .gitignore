@@ -86,6 +86,3 @@ tmp_*.py
 .parcel-cache/
 coverage/
 .nyc_output/
-
-# Legacy
-legacy/
