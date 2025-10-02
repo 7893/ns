@@ -1,4 +1,4 @@
-# === OS / Editor ===
+# OS / Editor
 .DS_Store
 Thumbs.db
 *.swp
@@ -6,8 +6,10 @@ Thumbs.db
 *.bak
 *.tmp
 *.log
+.idea/
+.vscode/
 
-# === Python ===
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -15,19 +17,24 @@ __pycache__/
 .venv/
 env/
 venv/
+*.egg-info/
+.pytest_cache/
 
-# === Node / JS ===
+# Node / JS
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.pnpm-store/
 dist/
 build/
 .next/
 out/
+.wrangler/
+.dev.vars
 
-# === Terraform ===
+# Terraform
 .terraform/
 .terraform.lock.hcl
 *.tfstate
@@ -43,9 +50,10 @@ override.tf.json
 **/*.tfvars
 terraform.tfvars.json
 
-# === GCP / Secrets ===
+# Secrets / Credentials
 *.json
 !package*.json
+!tsconfig*.json
 !.github/**/*.json
 *.key
 *.pem
@@ -55,28 +63,29 @@ service-account*.json
 credentials*.json
 gce-service-account-key.json
 
-# === Environment ===
+# Environment
 .env
 .env.*
 !.env.example
 .envrc
 .secrets
 
-# === Testing / Development ===
+# Testing / Development
 test_*.py
 *_test.py
 test_local.py
-test_function_local.py
-test_simple.py
 validate_*.py
-api_types_*.py
-*_analysis.py
-*_ANALYSIS.md
-API_*.md
-NASA_*.md
 temp_*.py
 tmp_*.py
+*_analysis.py
+*_ANALYSIS.md
 
-# === Misc ===
-.idea/
-.vscode/
+# Build / Cache
+*.cache
+.cache/
+.parcel-cache/
+coverage/
+.nyc_output/
+
+# Legacy
+legacy/

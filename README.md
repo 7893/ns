@@ -1,40 +1,41 @@
 # NS - NASA Data System
 
-极简化的NASA数据收集系统，基于单函数统一架构。
+极简化的 NASA 数据收集系统，基于 Cloudflare Workers。
 
-## 架构
+## 特性
 
-- **1个函数**: `ns-func-unified` - 处理所有NASA API
-- **1个Topic**: `ns-topic-unified` - 统一消息队列  
-- **3个调度器**: 每日/每小时/每周自动收集
-- **12个数据源**: APOD, 小行星, DONKI, EONET, EPIC, 火星照片, 图像库, 系外行星, 基因实验室, 技术组合, 技术转移, 地球图像
+- 🚀 单个 Worker 处理所有 NASA API
+- 📦 R2 存储统一数据管理
+- ⏰ Cron 自动调度（每日/每小时/每周）
+- 🌍 12 个 NASA 数据源
+- 🎨 现代化前端界面
 
 ## 快速开始
 
 ```bash
-# 设置环境
-export NASA_API_KEY="your-key"
-
-# 部署
-./scripts/deploy.sh
-
-# 监控
-gcloud functions logs read ns-func-unified --region=us-central1
+cd worker
+npm install
+wrangler login
+./deploy.sh
 ```
 
-## 手动触发
+详见 [worker/README.md](worker/README.md)
 
-```bash
-# 触发每日收集
-gcloud pubsub topics publish ns-topic-unified --message='{"schedule_type": "daily"}'
+## 项目结构
 
-# 触发单个数据源
-gcloud pubsub topics publish ns-topic-unified --attribute="source=apod"
+```
+ns/
+├── worker/          # Cloudflare Workers 主应用
+├── frontend/        # 前端界面
+├── docs/            # 文档
+├── legacy/          # 旧版本（GCP）
+└── .github/         # CI/CD
 ```
 
-## 数据存储
+## 数据源
 
-所有数据保存在 `gs://ns-data-2025/` 按以下结构组织：
-```
-{source}/{year}/{month}/{day}/{timestamp}.json
-```
+APOD, 小行星, DONKI, EONET, EPIC, 火星照片, 图像库, 系外行星, 基因实验室, 技术组合, 技术转移, 地球图像
+
+## 许可
+
+MIT
