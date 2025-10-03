@@ -12,11 +12,11 @@ bucket_name = "ns-data"
 [[d1_databases]]
 binding = "DB"
 database_name = "ns-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "b840a4de-1968-4fdd-8926-f30646f0d18c"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "YOUR_KV_NAMESPACE_ID"
+id = "1f44651ca2504b3d9e4ce73d6ae18f54"
 
 [vars]
 NASA_API_KEY = "ILeecsesMNeEs1LBJRa8G2R5RYKdp0I50d4nbyOo"
