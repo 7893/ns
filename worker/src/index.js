@@ -8,10 +8,18 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
 <div class="container">
-<header><h1>🚀 NS - NASA Data System</h1><p>极简化的NASA数据收集系统</p></header>
+<header><h1>🚀 NS - NASA Data System</h1><p>12 个 NASA API 数据收集系统</p></header>
 <main>
-<section class="status"><h2>系统状态</h2><div id="system-status">加载中...</div></section>
-<section class="data-sources"><h2>数据源</h2><div id="data-sources">加载中...</div></section>
+<section class="stats-grid">
+<div class="stat-card"><h3>📊 总 API 数</h3><div id="total-apis" class="big-number">12</div></div>
+<div class="stat-card"><h3>📦 总下载量</h3><div id="total-downloads" class="big-number">-</div></div>
+<div class="stat-card"><h3>💾 存储使用</h3><div id="storage-used" class="big-number">-</div></div>
+<div class="stat-card"><h3>⏰ 下次同步</h3><div id="next-sync" class="big-number">-</div></div>
+</section>
+<section class="api-list">
+<h2>数据源列表</h2>
+<div id="api-sources">加载中...</div>
+</section>
 </main>
 </div>
 <script src="/script.js"></script>
@@ -26,30 +34,72 @@ header h1 { font-size: 3rem; margin-bottom: 0.5rem; background: linear-gradient(
 header p { color: #888; font-size: 1.2rem; }
 section { background: #1a1a1a; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; border: 1px solid #333; }
 section h2 { margin-bottom: 1rem; color: #4ecdc4; }
-#system-status, #data-sources { color: #ccc; }`;
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; background: transparent; padding: 0; }
+.stat-card { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 1.5rem; text-align: center; }
+.stat-card h3 { font-size: 0.9rem; color: #888; margin-bottom: 0.5rem; }
+.big-number { font-size: 2.5rem; font-weight: bold; color: #4ecdc4; }
+.api-item { background: #222; padding: 1rem; margin-bottom: 0.5rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+.api-name { font-weight: bold; color: #4ecdc4; }
+.api-info { display: flex; gap: 1rem; font-size: 0.9rem; color: #888; }
+.api-badge { background: #333; padding: 0.25rem 0.5rem; border-radius: 4px; }
+.schedule-daily { color: #ff6b6b; }
+.schedule-hourly { color: #4ecdc4; }
+.schedule-weekly { color: #ffd93d; }`;
 
-const JS = `async function loadSystemStatus() {
+const JS = `const API_INFO = {
+  'apod': { name: 'APOD', type: 'JSON+图片', schedule: 'daily', images: 2 },
+  'asteroids-neows': { name: 'Asteroids', type: 'JSON', schedule: 'daily', images: 0 },
+  'donki': { name: 'DONKI', type: 'JSON', schedule: 'daily', images: 0 },
+  'eonet': { name: 'EONET', type: 'JSON', schedule: 'hourly', images: 0 },
+  'epic': { name: 'EPIC', type: 'JSON+图片', schedule: 'daily', images: 5 },
+  'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'daily', images: 10 },
+  'nasa-ivl': { name: 'NASA IVL', type: 'JSON+图片', schedule: 'hourly', images: 5 },
+  'exoplanet': { name: 'Exoplanet', type: 'JSON', schedule: 'weekly', images: 0 },
+  'genelab': { name: 'GeneLab', type: 'JSON', schedule: 'weekly', images: 0 },
+  'techport': { name: 'TechPort', type: 'JSON', schedule: 'weekly', images: 0 },
+  'techtransfer': { name: 'Tech Transfer', type: 'JSON', schedule: 'weekly', images: 0 },
+  'earth': { name: 'Earth', type: '图片', schedule: 'weekly', images: 1 }
+};
+
+async function loadStats() {
   try {
     const res = await fetch('/api/stats');
     const stats = await res.json();
-    const statusElement = document.getElementById('system-status');
-    const count = Object.keys(stats).length;
-    statusElement.innerHTML = '<div>数据源: ' + count + '</div><div>状态: 运行中</div><div>最后更新: ' + new Date().toLocaleString('zh-CN') + '</div>';
-  } catch (e) { console.error(e); }
+    
+    let totalDownloads = 0;
+    Object.values(stats).forEach(s => totalDownloads += (s.count || 0));
+    
+    document.getElementById('total-downloads').textContent = totalDownloads;
+    document.getElementById('storage-used').textContent = '~' + Math.round(totalDownloads * 2.5) + 'MB';
+    
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+    const minutes = Math.floor((nextHour - now) / 60000);
+    document.getElementById('next-sync').textContent = minutes + '分钟';
+    
+    displayAPIs(stats);
+  } catch (e) {
+    console.error(e);
+  }
 }
-async function loadDataSources() {
-  const sources = ['apod', 'asteroids-neows', 'donki', 'eonet', 'epic', 'mars-rover-photos', 'nasa-ivl', 'exoplanet', 'genelab', 'techport', 'techtransfer', 'earth'];
-  const sourcesElement = document.getElementById('data-sources');
-  sourcesElement.innerHTML = sources.map(s => '<span style="display:inline-block;margin:0.5rem;padding:0.5rem 1rem;background:#333;border-radius:6px;cursor:pointer" onclick="viewSource(\\'' + s + '\\')">' + s + '</span>').join('');
+
+function displayAPIs(stats) {
+  const container = document.getElementById('api-sources');
+  const html = Object.entries(API_INFO).map(([key, info]) => {
+    const stat = stats[key] || {};
+    const count = stat.count || 0;
+    const scheduleClass = 'schedule-' + info.schedule;
+    const scheduleText = info.schedule === 'daily' ? '每日' : info.schedule === 'hourly' ? '每小时' : '每周';
+    
+    return '<div class="api-item"><div><div class="api-name">' + info.name + '</div><div class="api-info"><span class="api-badge">' + info.type + '</span><span class="api-badge ' + scheduleClass + '">' + scheduleText + '</span>' + (info.images > 0 ? '<span class="api-badge">' + info.images + '张图片</span>' : '') + '</div></div><div style="text-align:right"><div style="font-size:1.5rem;font-weight:bold;color:#4ecdc4">' + count + '</div><div style="font-size:0.8rem;color:#888">次收集</div></div></div>';
+  }).join('');
+  
+  container.innerHTML = html;
 }
-async function viewSource(source) {
-  try {
-    const res = await fetch('/api/latest?source=' + source);
-    const data = await res.json();
-    alert(source + ':\\n' + JSON.stringify(data, null, 2).slice(0, 500) + '...');
-  } catch (e) { alert('Error: ' + e.message); }
-}
-document.addEventListener('DOMContentLoaded', () => { loadSystemStatus(); loadDataSources(); });`;
+
+document.addEventListener('DOMContentLoaded', loadStats);
+setInterval(loadStats, 60000);`;
 
 
 const SCHEDULE_MAP = {
@@ -373,8 +423,12 @@ async function getStats(env) {
   const stats = {};
   
   for (const source of sources) {
-    const list = await env.NS_DATA.list({ prefix: `${source}/`, limit: 1 });
-    stats[source] = { count: list.objects.length, latest: list.objects[0]?.uploaded || null };
+    const list = await env.NS_DATA.list({ prefix: `${source}/`, limit: 100 });
+    stats[source] = { 
+      count: list.objects.length, 
+      latest: list.objects[0]?.uploaded || null,
+      size: list.objects.reduce((sum, obj) => sum + (obj.size || 0), 0)
+    };
   }
   
   return stats;
