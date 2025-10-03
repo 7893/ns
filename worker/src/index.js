@@ -251,7 +251,7 @@ export default {
     
     if (!scheduleType) return;
     
-    console.log(`Running ${scheduleType} schedule`);
+    console.log("Running " + scheduleType + " schedule");
     const sources = SCHEDULE_MAP[scheduleType];
     
     // Collect all sources in parallel
@@ -323,27 +323,28 @@ async function downloadImages(source, data, env) {
   
   console.log(`Downloading ${imageUrls.length} images for ${source}`);
   
-  // Download images in parallel (max 5 at a time)
-  const chunks = [];
-  for (let i = 0; i < imageUrls.length; i += 5) {
-    chunks.push(imageUrls.slice(i, i + 5));
+  // Download all images
+  const images = [];
+  for (const imgUrl of imageUrls) {
+    try {
+      const imgResponse = await fetch(imgUrl, { signal: AbortSignal.timeout(30000) });
+      if (!imgResponse.ok) continue;
+      
+      const imgBuffer = await imgResponse.arrayBuffer();
+      images.push(imgBuffer);
+    } catch (e) {
+      console.error(`Failed to download image ${imgUrl}:`, e.message);
+    }
   }
   
-  for (const chunk of chunks) {
-    await Promise.allSettled(
-      chunk.map(async (imgUrl, idx) => {
-        try {
-          const imgResponse = await fetch(imgUrl, { signal: AbortSignal.timeout(30000) });
-          if (!imgResponse.ok) return;
-          
-          const imgBuffer = await imgResponse.arrayBuffer();
-          const imgContentType = imgResponse.headers.get("content-type") || "image/jpeg";
-          await saveImageData(source, imgBuffer, imgContentType, env, idx);
-        } catch (e) {
-          console.error(`Failed to download image ${imgUrl}:`, e.message);
-        }
-      })
-    );
+  if (images.length === 0) return;
+  
+  // If multiple images, merge them; otherwise save single image
+  if (images.length > 1) {
+    await saveMergedImages(source, images, env);
+  } else {
+    const imgContentType = "image/jpeg";
+    await saveImageData(source, images[0], imgContentType, env);
   }
 }
 
@@ -426,7 +427,54 @@ async function saveData(source, data, env, isError = false) {
   console.log(`Saved: ${key}`);
 }
 
-async function saveImageData(source, imageBuffer, contentType, env, index = null) {
+async function saveMergedImages(source, images, env) {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(now.getUTCDate()).padStart(2, "0");
+  const timestamp = now.toISOString().replace(/[-:]/g, "").split(".")[0];
+  
+  // Create a simple merged format: save as ZIP or concatenate
+  // For simplicity, we'll create a JSON manifest with base64 encoded images
+  const merged = {
+    source,
+    timestamp: now.toISOString(),
+    count: images.length,
+    images: images.map((img, idx) => ({
+      index: idx,
+      size: img.byteLength,
+      data: arrayBufferToBase64(img)
+    }))
+  };
+  
+  const key = `${source}/${year}/${month}/${day}/${timestamp}_merged.json`;
+  
+  await env.NS_DATA.put(key, JSON.stringify(merged), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  
+  // Log to D1
+  try {
+    await env.DB.prepare(
+      "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
+    ).bind(source, now.toISOString(), "success", null).run();
+  } catch (e) {
+    console.error("DB log failed:", e);
+  }
+  
+  console.log(`Saved merged images: ${key} (${images.length} images)`);
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function saveImageData(source, imageBuffer, contentType, env) {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -435,22 +483,19 @@ async function saveImageData(source, imageBuffer, contentType, env, index = null
   
   // Determine file extension from content type
   const ext = contentType.includes("png") ? "png" : contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "bin";
-  const indexSuffix = index !== null ? `_${index}` : "";
-  const key = `${source}/${year}/${month}/${day}/${timestamp}${indexSuffix}.${ext}`;
+  const key = `${source}/${year}/${month}/${day}/${timestamp}.${ext}`;
   
   await env.NS_DATA.put(key, imageBuffer, {
     httpMetadata: { contentType }
   });
   
-  // Log to D1 (only once for main image)
-  if (index === null) {
-    try {
-      await env.DB.prepare(
-        "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
-      ).bind(source, now.toISOString(), "success", null).run();
-    } catch (e) {
-      console.error("DB log failed:", e);
-    }
+  // Log to D1
+  try {
+    await env.DB.prepare(
+      "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
+    ).bind(source, now.toISOString(), "success", null).run();
+  } catch (e) {
+    console.error("DB log failed:", e);
   }
   
   console.log(`Saved image: ${key}`);
