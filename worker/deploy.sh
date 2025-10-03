@@ -14,4 +14,4 @@ wrangler deploy
 
 echo "Deployment complete!"
 echo ""
-echo "Manual trigger: https://ns-worker.<your-subdomain>.workers.dev/collect?source=apod"
+echo "Manual trigger: https://ns.<your-subdomain>.workers.dev/collect?source=apod"

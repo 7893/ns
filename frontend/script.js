@@ -1,36 +1,44 @@
-// NS - NASA Data System Frontend
-document.addEventListener('DOMContentLoaded', function() {
+const API_BASE = "https://ns.YOUR_SUBDOMAIN.workers.dev";
+
+document.addEventListener('DOMContentLoaded', () => {
     loadSystemStatus();
     loadDataSources();
 });
 
-function loadSystemStatus() {
-    const statusElement = document.getElementById('system-status');
-    
-    // 模拟系统状态
-    const status = {
-        functions: 1,
-        topics: 1,
-        lastUpdate: new Date().toLocaleString('zh-CN')
-    };
-    
-    statusElement.innerHTML = `
-        <div>函数数量: ${status.functions}</div>
-        <div>Topic数量: ${status.topics}</div>
-        <div>最后更新: ${status.lastUpdate}</div>
-    `;
+async function loadSystemStatus() {
+    try {
+        const res = await fetch(`${API_BASE}/api/stats`);
+        const stats = await res.json();
+        const statusElement = document.getElementById('system-status');
+        const count = Object.keys(stats).length;
+        statusElement.innerHTML = `
+            <div>数据源: ${count}</div>
+            <div>状态: 运行中</div>
+            <div>最后更新: ${new Date().toLocaleString('zh-CN')}</div>
+        `;
+    } catch (e) {
+        console.error("Failed to load status:", e);
+    }
 }
 
-function loadDataSources() {
+async function loadDataSources() {
+    const sources = ['apod', 'asteroids-neows', 'donki', 'eonet', 'epic', 
+        'mars-rover-photos', 'nasa-ivl', 'exoplanet', 'genelab', 'techport', 
+        'techtransfer', 'earth'];
+    
     const sourcesElement = document.getElementById('data-sources');
-    
-    const sources = [
-        'APOD', 'Asteroids', 'DONKI', 'EONET', 'EPIC', 
-        'Mars Rover Photos', 'NASA Image Library', 'Exoplanet',
-        'GeneLab', 'TechPort', 'Tech Transfer', 'Earth Imagery'
-    ];
-    
-    sourcesElement.innerHTML = sources.map(source => 
-        `<span style="display: inline-block; margin: 0.5rem; padding: 0.5rem 1rem; background: #333; border-radius: 6px;">${source}</span>`
+    sourcesElement.innerHTML = sources.map(s => 
+        `<span style="display:inline-block;margin:0.5rem;padding:0.5rem 1rem;background:#333;border-radius:6px;cursor:pointer" onclick="viewSource('${s}')">${s}</span>`
     ).join('');
 }
+
+async function viewSource(source) {
+    try {
+        const res = await fetch(`${API_BASE}/api/latest?source=${source}`);
+        const data = await res.json();
+        alert(`${source}:\n${JSON.stringify(data, null, 2).slice(0, 500)}...`);
+    } catch (e) {
+        alert(`Error: ${e.message}`);
+    }
+}
+

@@ -28,7 +28,7 @@ cd worker
 
 ```bash
 # 触发单个数据源
-curl "https://ns-worker.<your-subdomain>.workers.dev/collect?source=apod"
+curl "https://ns.<your-subdomain>.workers.dev/collect?source=apod"
 ```
 
 ### 本地开发

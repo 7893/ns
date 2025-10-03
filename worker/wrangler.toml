@@ -1,20 +1,22 @@
-name = "ns-worker"
+name = "ns"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
-# Cron triggers
 [triggers]
-crons = [
-  "0 0 * * *",    # daily at 00:00 UTC
-  "0 * * * *",    # hourly
-  "0 0 * * 0"     # weekly on Sunday
-]
+crons = ["0 0 * * *", "0 * * * *", "0 0 * * 0"]
 
-# R2 bucket binding for data storage
 [[r2_buckets]]
 binding = "NS_DATA"
 bucket_name = "ns-data"
 
-# Environment variables
+[[d1_databases]]
+binding = "DB"
+database_name = "ns-db"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "YOUR_KV_NAMESPACE_ID"
+
 [vars]
 NASA_API_KEY = "ILeecsesMNeEs1LBJRa8G2R5RYKdp0I50d4nbyOo"
