@@ -52,13 +52,13 @@ const JS = `const API_INFO = {
   'apod': { name: 'APOD', type: 'JSON+图片', schedule: 'daily', images: 2 },
   'asteroids-neows': { name: 'Asteroids', type: 'JSON', schedule: 'daily', images: 0 },
   'donki': { name: 'DONKI', type: 'JSON', schedule: 'every6h', images: 0 },
-  'eonet': { name: 'EONET', type: 'JSON', schedule: 'hourly', images: 0 },
+  'eonet': { name: 'EONET', type: 'JSON', schedule: 'every6h', images: 0 },
   'epic': { name: 'EPIC', type: 'JSON+图片', schedule: 'every6h', images: 5 },
   'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'weekly', images: 10 },
   'nasa-ivl': { name: 'NASA IVL', type: 'JSON+图片', schedule: 'every6h', images: 5 },
-  'exoplanet': { name: 'Exoplanet', type: 'JSON', schedule: 'monthly', images: 0 },
+  'exoplanet': { name: 'Exoplanet', type: 'JSON', schedule: 'weekly', images: 0 },
   'genelab': { name: 'GeneLab', type: 'JSON', schedule: 'weekly', images: 0 },
-  'techport': { name: 'TechPort', type: 'JSON', schedule: 'monthly', images: 0 },
+  'techport': { name: 'TechPort', type: 'JSON', schedule: 'weekly', images: 0 },
   'techtransfer': { name: 'Tech Transfer', type: 'JSON', schedule: 'weekly', images: 0 },
   'earth': { name: 'Earth', type: '图片', schedule: 'weekly', images: 1 }
 };
@@ -75,9 +75,9 @@ async function loadStats() {
     document.getElementById('storage-used').textContent = '~' + Math.round(totalDownloads * 2.5) + 'MB';
     
     const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
-    const minutes = Math.floor((nextHour - now) / 60000);
+    const next6h = new Date(now);
+    next6h.setHours(Math.floor(now.getHours() / 6) * 6 + 6, 0, 0, 0);
+    const minutes = Math.floor((next6h - now) / 60000);
     document.getElementById('next-sync').textContent = minutes + '分钟';
     
     displayAPIs(stats);
@@ -91,16 +91,12 @@ function displayAPIs(stats) {
   const scheduleNames = {
     'daily': '每日',
     'every6h': '每6小时',
-    'hourly': '每小时',
-    'weekly': '每周',
-    'monthly': '每月'
+    'weekly': '每周'
   };
   const scheduleColors = {
     'daily': 'schedule-daily',
     'every6h': 'schedule-every6h',
-    'hourly': 'schedule-hourly',
-    'weekly': 'schedule-weekly',
-    'monthly': 'schedule-monthly'
+    'weekly': 'schedule-weekly'
   };
   
   const html = Object.entries(API_INFO).map(([key, info]) => {
@@ -120,11 +116,9 @@ setInterval(loadStats, 60000);`;
 
 
 const SCHEDULE_MAP = {
+  every6h: ["donki", "epic", "nasa-ivl", "eonet"],
   daily: ["apod", "asteroids-neows"],
-  every6h: ["donki", "epic", "nasa-ivl"],
-  hourly: ["eonet"],
-  weekly: ["mars-rover-photos", "earth", "genelab", "techtransfer"],
-  monthly: ["exoplanet", "techport"]
+  weekly: ["mars-rover-photos", "earth", "genelab", "techtransfer", "exoplanet", "techport"]
 };
 
 const NASA_CONFIGS = {
@@ -195,11 +189,9 @@ export default {
     let scheduleType;
     
     // Determine schedule type from cron
-    if (cron === "0 0 * * *") scheduleType = "daily";
-    else if (cron === "0 */6 * * *") scheduleType = "every6h";
-    else if (cron === "0 * * * *") scheduleType = "hourly";
+    if (cron === "0 */6 * * *") scheduleType = "every6h";
+    else if (cron === "0 0 * * *") scheduleType = "daily";
     else if (cron === "0 0 * * 7") scheduleType = "weekly";
-    else if (cron === "0 0 1 * *") scheduleType = "monthly";
     
     if (!scheduleType) return;
     

@@ -4,11 +4,9 @@ compatibility_date = "2024-01-01"
 
 [triggers]
 crons = [
+  "0 */6 * * *",    # every 6 hours: donki, epic, nasa-ivl, eonet
   "0 0 * * *",      # daily: apod, asteroids-neows
-  "0 */6 * * *",    # every 6 hours: donki, epic, nasa-ivl
-  "0 * * * *",      # hourly: eonet
-  "0 0 * * 7",      # weekly: mars-rover-photos, earth, genelab, techtransfer
-  "0 0 1 * *"       # monthly: exoplanet, techport
+  "0 0 * * 7"       # weekly: mars-rover-photos, earth, genelab, techtransfer, exoplanet, techport
 ]
 
 [[r2_buckets]]
