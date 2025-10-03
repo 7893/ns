@@ -519,7 +519,7 @@ async function getLatest(source, env) {
   const cached = await env.CACHE.get(cacheKey, "json");
   if (cached) return cached;
   
-  const list = await env.NS_DATA.list({ prefix: `${source}/`, limit: 1 });
+  const list = await env.NS_DATA.list({ prefix: source + "/", limit: 1 });
   if (list.objects.length === 0) return { error: "No data" };
   
   const obj = await env.NS_DATA.get(list.objects[0].key);
@@ -530,7 +530,7 @@ async function getLatest(source, env) {
 }
 
 async function listFiles(source, env) {
-  const prefix = source ? `${source}/` : "";
+  const prefix = source ? source + "/" : "";
   const list = await env.NS_DATA.list({ prefix, limit: 100 });
   return { files: list.objects.map(o => ({ key: o.key, size: o.size, uploaded: o.uploaded })) };
 }
@@ -540,7 +540,7 @@ async function getStats(env) {
   const stats = {};
   
   for (const source of sources) {
-    const list = await env.NS_DATA.list({ prefix: `${source}/`, limit: 100 });
+    const list = await env.NS_DATA.list({ prefix: source + "/", limit: 100 });
     stats[source] = { 
       count: list.objects.length, 
       latest: list.objects[0]?.uploaded || null,
