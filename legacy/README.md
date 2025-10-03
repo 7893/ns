@@ -1,13 +1,12 @@
-# Legacy - GCP 版本
+# Legacy NASA Data System
 
-旧版本基于 Google Cloud Platform 的实现。
+This directory previously contained GCP-dependent infrastructure and applications.
+All GCP dependencies have been removed.
 
-## 内容
+## Removed Components
+- GCP Terraform infrastructure
+- GitHub Actions deployment workflows
+- Cloud Functions applications
+- GCP-specific configurations
 
-- `apps/` - Cloud Functions 代码
-- `infra/` - Terraform 基础设施
-- `scripts/` - 部署和管理脚本
-
-## 注意
-
-此版本已废弃，请使用 Cloudflare Workers 版本。
+For cloud-agnostic implementations, please refer to the main project directory.
