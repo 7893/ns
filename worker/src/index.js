@@ -174,13 +174,16 @@ async function collectData(source, env) {
     
     // Handle different content types
     if (contentType.includes("image/")) {
-      // Save image binary data
+      // Save image binary data (e.g., Earth API)
       const imageBuffer = await response.arrayBuffer();
       await saveImageData(source, imageBuffer, contentType, env);
     } else if (contentType.includes("application/json")) {
       // Save JSON data
       const data = await response.json();
       await saveData(source, data, env);
+      
+      // Download images if JSON contains image URLs
+      await downloadImages(source, data, env);
     } else {
       // Save as text (fallback)
       const text = await response.text();
@@ -193,6 +196,86 @@ async function collectData(source, env) {
     console.error(`Error collecting ${source}:`, error);
     await saveData(source, { error: error.message, timestamp: new Date().toISOString() }, env, true);
   }
+}
+
+async function downloadImages(source, data, env) {
+  const imageUrls = extractImageUrls(source, data);
+  if (imageUrls.length === 0) return;
+  
+  console.log(`Downloading ${imageUrls.length} images for ${source}`);
+  
+  // Download images in parallel (max 5 at a time)
+  const chunks = [];
+  for (let i = 0; i < imageUrls.length; i += 5) {
+    chunks.push(imageUrls.slice(i, i + 5));
+  }
+  
+  for (const chunk of chunks) {
+    await Promise.allSettled(
+      chunk.map(async (imgUrl, idx) => {
+        try {
+          const imgResponse = await fetch(imgUrl, { signal: AbortSignal.timeout(30000) });
+          if (!imgResponse.ok) return;
+          
+          const imgBuffer = await imgResponse.arrayBuffer();
+          const imgContentType = imgResponse.headers.get("content-type") || "image/jpeg";
+          await saveImageData(source, imgBuffer, imgContentType, env, idx);
+        } catch (e) {
+          console.error(`Failed to download image ${imgUrl}:`, e.message);
+        }
+      })
+    );
+  }
+}
+
+function extractImageUrls(source, data) {
+  const urls = [];
+  
+  try {
+    switch (source) {
+      case "apod":
+        // APOD: url or hdurl
+        if (data.url) urls.push(data.url);
+        if (data.hdurl && data.hdurl !== data.url) urls.push(data.hdurl);
+        break;
+        
+      case "epic":
+        // EPIC: multiple images
+        if (Array.isArray(data)) {
+          data.slice(0, 5).forEach(item => {
+            if (item.image) {
+              const date = item.date.split(' ')[0].replace(/-/g, '/');
+              urls.push(`https://epic.gsfc.nasa.gov/archive/natural/${date}/png/${item.image}.png`);
+            }
+          });
+        }
+        break;
+        
+      case "mars-rover-photos":
+        // Mars Rover: photos array
+        if (data.photos && Array.isArray(data.photos)) {
+          data.photos.slice(0, 10).forEach(photo => {
+            if (photo.img_src) urls.push(photo.img_src);
+          });
+        }
+        break;
+        
+      case "nasa-ivl":
+        // NASA Image Library: items with links
+        if (data.collection && data.collection.items) {
+          data.collection.items.slice(0, 5).forEach(item => {
+            if (item.links && item.links[0] && item.links[0].href) {
+              urls.push(item.links[0].href);
+            }
+          });
+        }
+        break;
+    }
+  } catch (e) {
+    console.error(`Error extracting image URLs from ${source}:`, e);
+  }
+  
+  return urls;
 }
 
 async function saveData(source, data, env, isError = false) {
@@ -221,7 +304,7 @@ async function saveData(source, data, env, isError = false) {
   console.log(`Saved: ${key}`);
 }
 
-async function saveImageData(source, imageBuffer, contentType, env) {
+async function saveImageData(source, imageBuffer, contentType, env, index = null) {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
@@ -230,19 +313,22 @@ async function saveImageData(source, imageBuffer, contentType, env) {
   
   // Determine file extension from content type
   const ext = contentType.includes("png") ? "png" : contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "bin";
-  const key = `${source}/${year}/${month}/${day}/${timestamp}.${ext}`;
+  const indexSuffix = index !== null ? `_${index}` : "";
+  const key = `${source}/${year}/${month}/${day}/${timestamp}${indexSuffix}.${ext}`;
   
   await env.NS_DATA.put(key, imageBuffer, {
     httpMetadata: { contentType }
   });
   
-  // Log to D1
-  try {
-    await env.DB.prepare(
-      "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
-    ).bind(source, now.toISOString(), "success", null).run();
-  } catch (e) {
-    console.error("DB log failed:", e);
+  // Log to D1 (only once for main image)
+  if (index === null) {
+    try {
+      await env.DB.prepare(
+        "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
+      ).bind(source, now.toISOString(), "success", null).run();
+    } catch (e) {
+      console.error("DB log failed:", e);
+    }
   }
   
   console.log(`Saved image: ${key}`);
