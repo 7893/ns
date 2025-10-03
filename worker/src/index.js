@@ -18,7 +18,7 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const CSS = \`* { margin: 0; padding: 0; box-sizing: border-box; }
+const CSS = `* { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; line-height: 1.6; }
 .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 header { text-align: center; margin-bottom: 3rem; }
@@ -26,30 +26,31 @@ header h1 { font-size: 3rem; margin-bottom: 0.5rem; background: linear-gradient(
 header p { color: #888; font-size: 1.2rem; }
 section { background: #1a1a1a; border-radius: 12px; padding: 2rem; margin-bottom: 2rem; border: 1px solid #333; }
 section h2 { margin-bottom: 1rem; color: #4ecdc4; }
-#system-status, #data-sources { color: #ccc; }\`;
+#system-status, #data-sources { color: #ccc; }`;
 
-const JS = \`async function loadSystemStatus() {
+const JS = `async function loadSystemStatus() {
   try {
     const res = await fetch('/api/stats');
     const stats = await res.json();
     const statusElement = document.getElementById('system-status');
     const count = Object.keys(stats).length;
-    statusElement.innerHTML = \\\`<div>数据源: \${count}</div><div>状态: 运行中</div><div>最后更新: \${new Date().toLocaleString('zh-CN')}</div>\\\`;
+    statusElement.innerHTML = '<div>数据源: ' + count + '</div><div>状态: 运行中</div><div>最后更新: ' + new Date().toLocaleString('zh-CN') + '</div>';
   } catch (e) { console.error(e); }
 }
 async function loadDataSources() {
   const sources = ['apod', 'asteroids-neows', 'donki', 'eonet', 'epic', 'mars-rover-photos', 'nasa-ivl', 'exoplanet', 'genelab', 'techport', 'techtransfer', 'earth'];
   const sourcesElement = document.getElementById('data-sources');
-  sourcesElement.innerHTML = sources.map(s => \\\`<span style="display:inline-block;margin:0.5rem;padding:0.5rem 1rem;background:#333;border-radius:6px;cursor:pointer" onclick="viewSource('\${s}')">\${s}</span>\\\`).join('');
+  sourcesElement.innerHTML = sources.map(s => '<span style="display:inline-block;margin:0.5rem;padding:0.5rem 1rem;background:#333;border-radius:6px;cursor:pointer" onclick="viewSource(\\'' + s + '\\')">' + s + '</span>').join('');
 }
 async function viewSource(source) {
   try {
-    const res = await fetch(\\\`/api/latest?source=\${source}\\\`);
+    const res = await fetch('/api/latest?source=' + source);
     const data = await res.json();
-    alert(\\\`\${source}:\\n\${JSON.stringify(data, null, 2).slice(0, 500)}...\\\`);
-  } catch (e) { alert(\\\`Error: \${e.message}\\\`); }
+    alert(source + ':\\n' + JSON.stringify(data, null, 2).slice(0, 500) + '...');
+  } catch (e) { alert('Error: ' + e.message); }
 }
-document.addEventListener('DOMContentLoaded', () => { loadSystemStatus(); loadDataSources(); });\`;
+document.addEventListener('DOMContentLoaded', () => { loadSystemStatus(); loadDataSources(); });`;
+
 
 const SCHEDULE_MAP = {
   daily: ["apod", "asteroids-neows", "donki", "epic", "mars-rover-photos"],
