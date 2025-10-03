@@ -128,7 +128,7 @@ export default {
     // Determine schedule type from cron
     if (cron === "0 0 * * *") scheduleType = "daily";
     else if (cron === "0 * * * *") scheduleType = "hourly";
-    else if (cron === "0 0 * * 0") scheduleType = "weekly";
+    else if (cron === "0 0 * * 7") scheduleType = "weekly";
     
     if (!scheduleType) return;
     
