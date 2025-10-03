@@ -251,7 +251,7 @@ export default {
     
     if (!scheduleType) return;
     
-    console.log(`Running ${scheduleType} schedule`);
+    console.log("Running " + scheduleType + " schedule");
     const sources = SCHEDULE_MAP[scheduleType];
     
     // Collect all sources in parallel
@@ -262,7 +262,7 @@ export default {
 };
 
 async function collectData(source, env) {
-  console.log(`Collecting ${source}`);
+  console.log("Collecting " + source);
   
   try {
     const config = NASA_CONFIGS[source];
@@ -309,7 +309,7 @@ async function collectData(source, env) {
       await saveData(source, { raw_content: text, content_type: contentType }, env);
     }
     
-    console.log(`Successfully collected ${source}`);
+    console.log("Successfully collected " + source);
     
   } catch (error) {
     console.error(`Error collecting ${source}:`, error);
