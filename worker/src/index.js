@@ -171,12 +171,22 @@ async function collectData(source, env) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     
     const contentType = response.headers.get("content-type") || "";
-    const data = contentType.includes("application/json") 
-      ? await response.json()
-      : { raw_content: (await response.text()).slice(0, 1000) };
     
-    // Save to R2
-    await saveData(source, data, env);
+    // Handle different content types
+    if (contentType.includes("image/")) {
+      // Save image binary data
+      const imageBuffer = await response.arrayBuffer();
+      await saveImageData(source, imageBuffer, contentType, env);
+    } else if (contentType.includes("application/json")) {
+      // Save JSON data
+      const data = await response.json();
+      await saveData(source, data, env);
+    } else {
+      // Save as text (fallback)
+      const text = await response.text();
+      await saveData(source, { raw_content: text, content_type: contentType }, env);
+    }
+    
     console.log(`Successfully collected ${source}`);
     
   } catch (error) {
@@ -209,6 +219,33 @@ async function saveData(source, data, env, isError = false) {
   }
   
   console.log(`Saved: ${key}`);
+}
+
+async function saveImageData(source, imageBuffer, contentType, env) {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(now.getUTCDate()).padStart(2, "0");
+  const timestamp = now.toISOString().replace(/[-:]/g, "").split(".")[0];
+  
+  // Determine file extension from content type
+  const ext = contentType.includes("png") ? "png" : contentType.includes("jpeg") || contentType.includes("jpg") ? "jpg" : "bin";
+  const key = `${source}/${year}/${month}/${day}/${timestamp}.${ext}`;
+  
+  await env.NS_DATA.put(key, imageBuffer, {
+    httpMetadata: { contentType }
+  });
+  
+  // Log to D1
+  try {
+    await env.DB.prepare(
+      "INSERT INTO collections (source, timestamp, status, error) VALUES (?, ?, ?, ?)"
+    ).bind(source, now.toISOString(), "success", null).run();
+  } catch (e) {
+    console.error("DB log failed:", e);
+  }
+  
+  console.log(`Saved image: ${key}`);
 }
 
 function getDate(daysOffset) {
