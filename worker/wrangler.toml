@@ -6,7 +6,7 @@ compatibility_date = "2024-01-01"
 crons = [
   "0 */3 * * *",    # every 3 hours: donki, eonet (real-time events)
   "0 0 * * *",      # daily: apod, asteroids, epic, mars (regular updates)
-  "0 0 * * 0"       # weekly: nasa-ivl, earth, genelab, techtransfer, exoplanet, techport
+  "0 0 * * 7"       # weekly: nasa-ivl, earth, genelab, techtransfer, exoplanet, techport
 ]
 
 [[r2_buckets]]

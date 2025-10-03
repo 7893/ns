@@ -43,74 +43,25 @@ section h2 { margin-bottom: 1rem; color: #4ecdc4; }
 .api-info { display: flex; gap: 1rem; font-size: 0.9rem; color: #888; }
 .api-badge { background: #333; padding: 0.25rem 0.5rem; border-radius: 4px; }
 .schedule-daily { color: #ff6b6b; }
-.schedule-every3h { color: #ee5a6f; }
-.schedule-weekly { color: #ffd93d; }`;
+.schedule-every6h { color: #ff9f43; }
+.schedule-hourly { color: #4ecdc4; }
+.schedule-weekly { color: #ffd93d; }
+.schedule-monthly { color: #a29bfe; }`;
 
 const JS = `const API_INFO = {
-  'apod': { name: 'APOD', type: 'JSON+图片', schedule: 'daily', images: 1 },
+  'apod': { name: 'APOD', type: 'JSON+图片', schedule: 'daily', images: 2 },
   'asteroids-neows': { name: 'Asteroids', type: 'JSON', schedule: 'daily', images: 0 },
-  'donki': { name: 'DONKI', type: 'JSON', schedule: 'every3h', images: 0 },
-  'eonet': { name: 'EONET', type: 'JSON', schedule: 'every3h', images: 0 },
-  'epic': { name: 'EPIC', type: 'JSON+图片', schedule: 'daily', images: 1 },
-  'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'daily', images: 3 },
-  'nasa-ivl': { name: 'NASA IVL', type: 'JSON', schedule: 'weekly', images: 0 },
+  'donki': { name: 'DONKI', type: 'JSON', schedule: 'every6h', images: 0 },
+  'eonet': { name: 'EONET', type: 'JSON', schedule: 'every6h', images: 0 },
+  'epic': { name: 'EPIC', type: 'JSON+图片', schedule: 'every6h', images: 5 },
+  'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'daily', images: 10 },
+  'nasa-ivl': { name: 'NASA IVL', type: 'JSON+图片', schedule: 'every6h', images: 5 },
   'exoplanet': { name: 'Exoplanet', type: 'JSON', schedule: 'weekly', images: 0 },
   'genelab': { name: 'GeneLab', type: 'JSON', schedule: 'weekly', images: 0 },
   'techport': { name: 'TechPort', type: 'JSON', schedule: 'weekly', images: 0 },
   'techtransfer': { name: 'Tech Transfer', type: 'JSON', schedule: 'weekly', images: 0 },
   'earth': { name: 'Earth', type: '图片', schedule: 'weekly', images: 1 }
 };
-
-async function loadStats() {
-  try {
-    const res = await fetch('/api/stats');
-    const stats = await res.json();
-    
-    let totalDownloads = 0;
-    Object.values(stats).forEach(s => totalDownloads += (s.count || 0));
-    
-    document.getElementById('total-downloads').textContent = totalDownloads;
-    document.getElementById('storage-used').textContent = '~' + Math.round(totalDownloads * 1.5) + 'MB';
-    
-    const now = new Date();
-    const next3h = new Date(now);
-    next3h.setHours(Math.floor(now.getHours() / 3) * 3 + 3, 0, 0, 0);
-    const minutes = Math.floor((next3h - now) / 60000);
-    document.getElementById('next-sync').textContent = minutes + '分钟';
-    
-    displayAPIs(stats);
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-function displayAPIs(stats) {
-  const container = document.getElementById('api-sources');
-  const scheduleNames = {
-    'daily': '每日',
-    'every3h': '每3小时',
-    'weekly': '每周'
-  };
-  const scheduleColors = {
-    'daily': 'schedule-daily',
-    'every3h': 'schedule-every3h',
-    'weekly': 'schedule-weekly'
-  };
-  
-  const html = Object.entries(API_INFO).map(([key, info]) => {
-    const stat = stats[key] || {};
-    const count = stat.count || 0;
-    const scheduleClass = scheduleColors[info.schedule];
-    const scheduleText = scheduleNames[info.schedule];
-    
-    return '<div class="api-item"><div><div class="api-name">' + info.name + '</div><div class="api-info"><span class="api-badge">' + info.type + '</span><span class="api-badge ' + scheduleClass + '">' + scheduleText + '</span>' + (info.images > 0 ? '<span class="api-badge">' + info.images + '张图片</span>' : '') + '</div></div><div style="text-align:right"><div style="font-size:1.5rem;font-weight:bold;color:#4ecdc4">' + count + '</div><div style="font-size:0.8rem;color:#888">次收集</div></div></div>';
-  }).join('');
-  
-  container.innerHTML = html;
-}
-
-document.addEventListener('DOMContentLoaded', loadStats);
-setInterval(loadStats, 60000);`;
 
 async function loadStats() {
   try {
@@ -165,16 +116,9 @@ setInterval(loadStats, 60000);`;
 
 
 const SCHEDULE_MAP = {
-  every3h: ["donki", "eonet"],                                                        // 实时事件
-  daily: ["apod", "asteroids-neows", "epic", "mars-rover-photos"],                   // 常规更新
-  weekly: ["nasa-ivl", "earth", "genelab", "techtransfer", "exoplanet", "techport"]  // 慢更新
-};
-
-const IMAGE_LIMITS = {
-  'apod': 1,                // 只保存第一张
-  'epic': 1,                // 只保存第一张（代表性足够）
-  'mars-rover-photos': 3,   // 只保存前 3 张
-  'nasa-ivl': 0             // 不下载图片（只保存 JSON 中的 URL）
+  every6h: ["donki", "epic", "nasa-ivl", "eonet"],                                    // 实时性强
+  daily: ["apod", "asteroids-neows", "mars-rover-photos"],                            // 每日更新
+  weekly: ["earth", "genelab", "techtransfer", "exoplanet", "techport"]              // 慢更新
 };
 
 const NASA_CONFIGS = {
@@ -245,13 +189,13 @@ export default {
     let scheduleType;
     
     // Determine schedule type from cron
-    if (cron === "0 */3 * * *") scheduleType = "every3h";
+    if (cron === "0 */6 * * *") scheduleType = "every6h";
     else if (cron === "0 0 * * *") scheduleType = "daily";
-    else if (cron === "0 0 * * 0") scheduleType = "weekly";
+    else if (cron === "0 0 * * 7") scheduleType = "weekly";
     
     if (!scheduleType) return;
     
-    console.log("Running " + scheduleType + " schedule");
+    console.log(`Running ${scheduleType} schedule`);
     const sources = SCHEDULE_MAP[scheduleType];
     
     // Collect all sources in parallel
@@ -262,7 +206,7 @@ export default {
 };
 
 async function collectData(source, env) {
-  console.log("Collecting " + source);
+  console.log(`Collecting ${source}`);
   
   try {
     const config = NASA_CONFIGS[source];
@@ -309,7 +253,7 @@ async function collectData(source, env) {
       await saveData(source, { raw_content: text, content_type: contentType }, env);
     }
     
-    console.log("Successfully collected " + source);
+    console.log(`Successfully collected ${source}`);
     
   } catch (error) {
     console.error(`Error collecting ${source}:`, error);
@@ -349,22 +293,19 @@ async function downloadImages(source, data, env) {
 
 function extractImageUrls(source, data) {
   const urls = [];
-  const limit = IMAGE_LIMITS[source] || 0;
-  
-  if (limit === 0) return urls;  // 不下载图片
   
   try {
     switch (source) {
       case "apod":
         // APOD: url or hdurl
         if (data.url) urls.push(data.url);
-        if (data.hdurl && data.hdurl !== data.url && urls.length < limit) urls.push(data.hdurl);
+        if (data.hdurl && data.hdurl !== data.url) urls.push(data.hdurl);
         break;
         
       case "epic":
         // EPIC: multiple images
         if (Array.isArray(data)) {
-          data.slice(0, limit).forEach(item => {
+          data.slice(0, 5).forEach(item => {
             if (item.image) {
               const date = item.date.split(' ')[0].replace(/-/g, '/');
               urls.push(`https://epic.gsfc.nasa.gov/archive/natural/${date}/png/${item.image}.png`);
@@ -376,16 +317,16 @@ function extractImageUrls(source, data) {
       case "mars-rover-photos":
         // Mars Rover: photos array
         if (data.photos && Array.isArray(data.photos)) {
-          data.photos.slice(0, limit).forEach(photo => {
+          data.photos.slice(0, 10).forEach(photo => {
             if (photo.img_src) urls.push(photo.img_src);
           });
         }
         break;
         
       case "nasa-ivl":
-        // NASA Image Library: items with links (limit = 0, won't download)
+        // NASA Image Library: items with links
         if (data.collection && data.collection.items) {
-          data.collection.items.slice(0, limit).forEach(item => {
+          data.collection.items.slice(0, 5).forEach(item => {
             if (item.links && item.links[0] && item.links[0].href) {
               urls.push(item.links[0].href);
             }
