@@ -54,7 +54,7 @@ const JS = `const API_INFO = {
   'donki': { name: 'DONKI', type: 'JSON', schedule: 'every6h', images: 0 },
   'eonet': { name: 'EONET', type: 'JSON', schedule: 'every6h', images: 0 },
   'epic': { name: 'EPIC', type: 'JSON+图片', schedule: 'every6h', images: 5 },
-  'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'weekly', images: 10 },
+  'mars-rover-photos': { name: 'Mars Rover', type: 'JSON+图片', schedule: 'daily', images: 10 },
   'nasa-ivl': { name: 'NASA IVL', type: 'JSON+图片', schedule: 'every6h', images: 5 },
   'exoplanet': { name: 'Exoplanet', type: 'JSON', schedule: 'weekly', images: 0 },
   'genelab': { name: 'GeneLab', type: 'JSON', schedule: 'weekly', images: 0 },
@@ -116,9 +116,9 @@ setInterval(loadStats, 60000);`;
 
 
 const SCHEDULE_MAP = {
-  every6h: ["donki", "epic", "nasa-ivl", "eonet"],
-  daily: ["apod", "asteroids-neows"],
-  weekly: ["mars-rover-photos", "earth", "genelab", "techtransfer", "exoplanet", "techport"]
+  every6h: ["donki", "epic", "nasa-ivl", "eonet"],                                    // 实时性强
+  daily: ["apod", "asteroids-neows", "mars-rover-photos"],                            // 每日更新
+  weekly: ["earth", "genelab", "techtransfer", "exoplanet", "techport"]              // 慢更新
 };
 
 const NASA_CONFIGS = {
